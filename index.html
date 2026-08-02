@@ -360,6 +360,20 @@
   }
   .rarity-filter .r-toggle img{width:19px;height:19px;object-fit:contain;}
   .rarity-filter .r-toggle.on{opacity:1;border-color:var(--r-color,var(--border));box-shadow:0 0 8px -2px var(--r-color,transparent);}
+
+  /* ---------- iconos de tipo de equipo (atajo, espejo del grid de Equipo) ---------- */
+  .equip-filter{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.5rem;}
+  .equip-filter .eq-toggle{
+    width:30px;height:30px;border-radius:8px;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--surface-2);border:1px solid var(--border);cursor:pointer;
+    opacity:.55;transition:opacity .15s,border-color .15s,box-shadow .15s;
+  }
+  .equip-filter .eq-toggle:hover{opacity:.85;}
+  .equip-filter .eq-toggle img{width:19px;height:19px;object-fit:contain;}
+  .equip-filter .eq-toggle.active{
+    opacity:1;border-color:var(--gold,#f1c13a);box-shadow:0 0 8px -2px var(--gold,#f1c13a);
+  }
   input[type=text], select{
     background:var(--surface-2);
     border:1px solid var(--border);
@@ -745,6 +759,7 @@
           <span class="lvl-val" id="lvl-val">1 - 245</span>
         </div>
         <div class="rarity-filter" id="rarity-filter"></div>
+        <div class="equip-filter" id="equip-filter"></div>
         <div class="find-msg" id="results-list"></div>
       </div>
     </div>
@@ -847,6 +862,25 @@ const GEAR_SLOTS = [
   { key:'Emblema',      tipo:'Emblema',                       corto:'Emblema',    ico:'itemTypes/646' },
 ];
 GEAR_SLOTS.forEach(s => candidatesBySlot[s.key] = []);
+
+/* Fila de iconos de tipo de equipo en el buscador: atajo de selectSlot(), con
+   el icono activo resaltado igual que el slot activo en el grid de Equipo de
+   arriba (mismo estado, misma fuente de verdad: activeSlot). No depende del
+   dataset, se puede montar ya. */
+function renderEquipFilter(){
+  const wrap = document.getElementById('equip-filter');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  GEAR_SLOTS.forEach(s => {
+    const btn = document.createElement('div');
+    btn.className = 'eq-toggle' + (activeSlot === s.key ? ' active' : '');
+    btn.title = s.key;
+    btn.innerHTML = `<img src="${ASSETS}/${s.ico}.png" alt="" onerror="this.remove()">`;
+    btn.onclick = () => selectSlot(s.key);
+    wrap.appendChild(btn);
+  });
+}
+renderEquipFilter();
 
 /* Colores de rareza MEDIDOS pixel a pixel sobre rarities/0..7.png de wakassets
    (no inventados).
@@ -1280,6 +1314,7 @@ function selectSlot(key){
   }
   renderGear();
   renderCandidates();
+  renderEquipFilter();
   doSearch();
 }
 
