@@ -359,6 +359,20 @@
   .combo-head .rank{
     font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-dim);margin-left:auto;
   }
+  .combo-head button{font-size:.74rem;padding:.25rem .6rem;}
+  .combo-head button.on{
+    background:rgba(47,211,154,.14);border-color:var(--ok);color:var(--ok);font-weight:600;
+  }
+  .combo-head button.sheet-on{
+    background:rgba(241,193,58,.13);border-color:rgba(241,193,58,.5);color:var(--gold);font-weight:600;
+  }
+  .cap-warn{
+    background:rgba(239,95,116,.09);border:1px solid rgba(239,95,116,.35);
+    color:#ffb3bf;border-radius:8px;padding:.5rem .7rem;font-size:.8rem;
+  }
+  .cap-note{color:var(--text-dim);font-size:.78rem;text-align:center;padding:.7rem 0 .2rem;}
+  .n-combos{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text-muted);}
+  .n-combos.over{color:var(--danger);font-weight:700;}
   .compare-toggle{display:flex;align-items:center;gap:.35rem;font-size:.76rem;color:var(--text-muted);cursor:pointer;}
   .combo-pieces{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.55rem;}
   .piece{
@@ -429,7 +443,7 @@
 
   /* ---------- tooltip de objeto (al pasar el ratón) ---------- */
   .tip{
-    position:fixed;z-index:80;pointer-events:none;width:310px;
+    position:fixed;z-index:80;pointer-events:none;width:310px;max-height:78vh;overflow:hidden;
     background:linear-gradient(180deg,#1b2030,#12151e);
     border:1px solid var(--border);border-radius:12px;
     box-shadow:0 18px 44px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.05);
@@ -552,6 +566,7 @@
         <div class="toolbar">
           <button class="primary" id="compare-btn">Calcular combinaciones válidas</button>
           <select id="sort-select"><option value="">Ordenar por…</option></select>
+          <span class="n-combos" id="n-combos"></span>
           <span class="hint" id="combo-hint"></span>
         </div>
       </div>
@@ -585,6 +600,18 @@ let lastResults = [];
 let compareSelection = [];
 let activeSlot = null;
 let sheetSource = null;
+
+/* Tope de combinaciones. La herramienta esta pensada para comparar pocas piezas
+   (tipicamente: 1 unico + 1 normal contra otro unico + otro normal), no para
+   optimizar un build de 12 slots — el producto cartesiano crece exponencial y
+   con 7 slots x 3 candidatos ya son 2187 combinaciones y la pestana se cuelga.
+   Se avisa ANTES de calcular y no se llega a generar nada por encima del tope. */
+const MAX_COMBOS = 250;
+const MAX_CARDS = 40;   // cuantas tarjetas se pintan (las mejores del orden elegido)
+
+/* Normaliza para buscar: sin mayusculas y sin acentos, para que "critico"
+   encuentre "critico" y "crítico" igual. */
+const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 /* Los 12 slots del personaje. `tipo` es el valor de `slot` tal cual viene del
    dataset (generado por POSITION_LABELS en build_dataset.py) — los dos anillos
@@ -791,6 +818,37 @@ const MODES = {
 let sheetMode = 'juego';
 let openBlocks = {};
 
+/* Agrupa y ordena un conjunto de stats segun el modo activo de la ficha.
+   Lo usan la ficha, las tarjetas de combinacion y el comparador, para que una
+   misma stat aparezca siempre en el mismo sitio y en el mismo orden en toda la
+   interfaz (antes las tarjetas ordenaban por valor bruto y la ficha por bloques,
+   asi que costaba comparar dos tarjetas de un vistazo). */
+function groupedStats(stats){
+  const entries = Object.entries(stats).filter(([,v]) => v !== 0);
+  const used = new Set();
+  const out = [];
+  MODES[sheetMode].blocks.forEach(block => {
+    const rows = entries.filter(([k]) => {
+      if (used.has(k)) return false;
+      if (!block.match(k.toLowerCase())) return false;
+      used.add(k); return true;
+    });
+    if (!rows.length) return;
+    const orden = block.orden || [];
+    const rank = k => {
+      const n = k.toLowerCase();
+      const i = orden.findIndex(o => n === o || n.startsWith(o));
+      return i === -1 ? 999 : i;
+    };
+    rows.sort((a,b) => (rank(a[0]) - rank(b[0])) || (Math.abs(b[1]) - Math.abs(a[1])));
+    out.push({ title: block.title, rows });
+  });
+  return out;
+}
+function flatOrderedStats(stats){
+  return groupedStats(stats).flatMap(g => g.rows);
+}
+
 /* =========================================================================
    CARGA
    ========================================================================= */
@@ -809,6 +867,7 @@ fetch(RAW_URL)
   })
   .then(data => {
     items = data;
+    items.forEach(it => { it._n = norm(it.nombre); });
     statusEl.textContent = items.length.toLocaleString('es') + ' objetos cargados';
     statusEl.className = 'status ok';
     setupSlotFilter();
@@ -859,6 +918,12 @@ function setupSortOptions(){
     opt.value = s; opt.textContent = s;
     sortSelect.appendChild(opt);
   });
+  // Orden por defecto: sin uno, la primera combinacion de la lista no significa
+  // nada y la etiqueta "Mejor" no aparece. Se elige el primer criterio
+  // disponible de esta lista, en el mismo orden de importancia que usa la ficha.
+  const preferido = ['Dominio elemental total','PdV','Punto de vida','Vida','PA']
+    .find(k => [...sortSelect.options].some(o => o.value === k));
+  if (preferido) sortSelect.value = preferido;
 }
 
 /* =========================================================================
@@ -866,6 +931,25 @@ function setupSortOptions(){
    ========================================================================= */
 function totalCandidates(){
   return GEAR_SLOTS.reduce((n,s) => n + candidatesBySlot[s.key].length, 0);
+}
+
+/* Cuantas combinaciones saldrian con los candidatos actuales (producto de los
+   slots que tienen al menos uno). Es una cota superior: al calcular todavia se
+   descartan las que violan la regla de 1 reliquia / 1 epico. */
+function combosPrevistas(){
+  return GEAR_SLOTS
+    .map(s => candidatesBySlot[s.key].length)
+    .filter(n => n > 0)
+    .reduce((a,b) => a * b, 1);
+}
+
+function renderComboCounter(){
+  const el = document.getElementById('n-combos');
+  const n = totalCandidates() ? combosPrevistas() : 0;
+  el.classList.toggle('over', n > MAX_COMBOS);
+  el.textContent = n ? n.toLocaleString('es') + ' combinaciones'
+                       + (n > MAX_COMBOS ? ' — demasiadas (máx. ' + MAX_COMBOS + ')' : '')
+                     : '';
 }
 
 function renderGear(){
@@ -892,6 +976,7 @@ function renderGear(){
     grid.appendChild(el);
   });
   document.getElementById('gear-count').textContent = totalCandidates() + ' candidatos';
+  renderComboCounter();
 }
 
 function selectSlot(key){
@@ -913,6 +998,7 @@ document.getElementById('clear-all').onclick = () => {
   lastResults = []; compareSelection = []; sheetSource = null;
   renderGear(); renderCandidates(); renderSheet(); resultsPanel.innerHTML = '';
   document.getElementById('combo-hint').textContent = '';
+  hideTip();
   doSearch();
 };
 
@@ -932,6 +1018,9 @@ function targetSlotFor(it){
 function addCandidate(it, slotKey){
   const key = slotKey || targetSlotFor(it);
   if (!key) return;
+  // Sin duplicados: el mismo objeto dos veces en el mismo slot no aporta nada,
+  // solo multiplica las combinaciones.
+  if (candidatesBySlot[key].some(c => c.id === it.id)) return;
   candidatesBySlot[key].push(it);
   if (!activeSlot) activeSlot = key;
   renderGear(); renderCandidates(); doSearch();
@@ -1026,7 +1115,7 @@ function tipHtml(it){
       const pri = k => /^(pdv|punto de vida|vida|vitalidad)$/i.test(k) ? 0 : 1;
       return (pri(a[0]) - pri(b[0])) || (Math.abs(b[1]) - Math.abs(a[1]));
     });
-  const shown = rows.slice(0, 12);
+  const shown = rows.slice(0, 20);
   const rounded = v => Math.round(v*100)/100;
   return `
     <div class="t-name" style="color:${rarityColor(it.rareza)}">${rarityGem(it.rareza)}<span>${it.nombre}</span>${tagFor(it)}</div>
@@ -1077,6 +1166,23 @@ document.addEventListener('mouseout', e => {
 });
 document.addEventListener('scroll', hideTip, true);
 
+/* En tactil no hay hover: se toca el icono del objeto para ver la ficha rapida.
+   Solo el icono, para no robarle el toque a los botones de la tarjeta. */
+if (window.matchMedia('(hover: none)').matches){
+  document.addEventListener('click', e => {
+    const ico = e.target.closest && e.target.closest('.itemicon, .gear-slot .frame');
+    const host = ico && ico.closest('[data-tip]');
+    if (!host || !host.__item){ hideTip(); return; }
+    e.preventDefault(); e.stopPropagation();
+    if (!tipEl.hidden && tipEl.__for === host.__item){ hideTip(); return; }
+    tipEl.__for = host.__item;
+    tipEl.innerHTML = tipHtml(host.__item);
+    tipEl.hidden = false;
+    const r = ico.getBoundingClientRect();
+    placeTip({ clientX: r.left + r.width/2, clientY: r.bottom });
+  }, true);
+}
+
 /* =========================================================================
    BUSCADOR
    ========================================================================= */
@@ -1088,7 +1194,7 @@ function topStatsOf(it, n){
 }
 
 function doSearch(){
-  const q = searchInput.value.trim().toLowerCase();
+  const q = searchInput.value.trim();
   const slot = slotFilter.value;
   const levelRange = levelFilter.value;
   const countEl = document.getElementById('find-count');
@@ -1102,8 +1208,11 @@ function doSearch(){
   if (levelRange){
     [lo, hi] = levelRange.split('-').map(Number);
   }
+  // Busqueda por palabras sueltas y sin acentos: "amuleto dragon" encuentra
+  // "Amuleto del dragon", y "critico" encuentra "critico".
+  const tokens = norm(q).split(/\s+/).filter(Boolean);
   const all = items.filter(it =>
-    it.nombre.toLowerCase().includes(q)
+    tokens.every(t => it._n.includes(t))
     && (!slot || it.slot === slot)
     && (lo === null || (it.nivel >= lo && it.nivel <= hi))
   );
@@ -1127,12 +1236,15 @@ function doSearch(){
         <div class="statline">${chips}</div>
       </div>`;
     const target = targetSlotFor(it);
+    const yaEsta = target && candidatesBySlot[target].some(c => c.id === it.id);
     const addBtn = document.createElement('button');
     addBtn.className = 'add';
-    addBtn.textContent = '+';
-    addBtn.title = target ? 'Añadir a ' + target : 'Este tipo de objeto no tiene slot en la ficha';
-    addBtn.disabled = !target;
-    if (!target) addBtn.style.opacity = '.35';
+    addBtn.textContent = yaEsta ? '✓' : '+';
+    addBtn.title = !target ? 'Este tipo de objeto no tiene slot en la ficha'
+                 : yaEsta ? 'Ya está en ' + target
+                 : 'Añadir a ' + target;
+    addBtn.disabled = !target || yaEsta;
+    if (!target || yaEsta) addBtn.style.opacity = '.4';
     addBtn.onclick = () => addCandidate(it, target);
     card.appendChild(addBtn);
     attachTip(card, it);
@@ -1252,8 +1364,7 @@ function statRowHtml(k, v, r){
 }
 
 function buildStatsGridHtml(r){
-  return Object.entries(r.stats)
-    .sort((a,b) => b[1]-a[1])
+  return flatOrderedStats(r.stats)
     .map(([k,v]) => statRowHtml(k, v, r))
     .join('');
 }
@@ -1278,28 +1389,14 @@ function renderSheet(){
   const lvls = r.items.map(i => i.nivel);
   document.getElementById('pill-lvl').textContent = 'nvl ' + Math.min(...lvls) + '–' + Math.max(...lvls);
 
-  const entries = Object.entries(r.stats).filter(([,v]) => v !== 0);
-  const used = new Set();
+  const groups = groupedStats(r.stats);
   let html = '';
-  MODES[sheetMode].blocks.forEach(block => {
-    const rows = entries.filter(([k]) => {
-      if (used.has(k)) return false;
-      if (!block.match(k.toLowerCase())) return false;
-      used.add(k); return true;
-    });
-    if (!rows.length) return;
-    const orden = block.orden || [];
-    const rank = k => {
-      const n = k.toLowerCase();
-      const i = orden.findIndex(o => n === o || n.startsWith(o));
-      return i === -1 ? 999 : i;
-    };
-    rows.sort((a,b) => (rank(a[0]) - rank(b[0])) || (Math.abs(b[1]) - Math.abs(a[1])));
-    const key = sheetMode + ':' + block.title;
-    const open = openBlocks[key] !== undefined ? openBlocks[key] : block.title !== 'Otros';
+  groups.forEach(g => {
+    const key = sheetMode + ':' + g.title;
+    const open = openBlocks[key] !== undefined ? openBlocks[key] : true;
     html += `<details class="statblock"${open ? ' open' : ''} data-block="${key}">
-      <summary><span class="bar"></span>${block.title}<span class="chev">▶</span></summary>
-      <div class="rows">${rows.map(([k,v]) => statRowHtml(k, v, r)).join('')}</div>
+      <summary><span class="bar"></span>${g.title}<span class="chev">▶</span></summary>
+      <div class="rows">${g.rows.map(([k,v]) => statRowHtml(k, v, r)).join('')}</div>
     </details>`;
   });
   body.innerHTML = html || '<div class="sheet-empty">Esta combinación no aporta stats.</div>';
@@ -1314,6 +1411,7 @@ document.getElementById('mode-toggle').onclick = (e) => {
   sheetMode = btn.dataset.mode;
   document.querySelectorAll('#mode-toggle button').forEach(b => b.classList.toggle('on', b === btn));
   renderSheet();
+  if (lastResults.length) renderResults();
 };
 
 /* =========================================================================
@@ -1327,9 +1425,21 @@ document.getElementById('compare-btn').onclick = () => {
     hintEl.textContent = '';
     return;
   }
+  const totalBruto = combosPrevistas();
+  if (totalBruto > MAX_COMBOS){
+    // No se genera nada: el producto cartesiano de tantos slots cuelga la pagina.
+    lastResults = []; compareSelection = []; sheetSource = null;
+    hintEl.textContent = '';
+    resultsPanel.innerHTML = `<div class="panel"><div class="panel-body"><div class="cap-warn">
+      <strong>${totalBruto.toLocaleString('es')} combinaciones</strong> — demasiadas para calcularlas (máximo ${MAX_COMBOS}).<br>
+      Esta herramienta está pensada para duelos cortos: por ejemplo 1 reliquia/épico + 1 objeto normal
+      contra otra pareja. Quita candidatos o vacía algún slot y vuelve a calcular.
+    </div></div></div>`;
+    renderSheet();
+    return;
+  }
   const optionLists = activeKeys.map(k => candidatesBySlot[k]);
   const combos = cartesian(optionLists).filter(isValidCombo);
-  const totalBruto = optionLists.reduce((n,l) => n * l.length, 1);
   lastResults = combos.map(combo => {
     const { stats, breakdown } = foldElementalStats(sumStats(combo));
     return { labels: activeKeys, items: combo, stats, breakdown };
@@ -1372,6 +1482,7 @@ function renderResults(){
   if (sortBy){
     sorted.sort((a,b) => (b.stats[sortBy]||0) - (a.stats[sortBy]||0));
   }
+  const shown = sorted.slice(0, MAX_CARDS);
   resultsPanel.innerHTML = '';
 
   const cmp = renderComparePanel();
@@ -1390,37 +1501,44 @@ function renderResults(){
     const h = document.createElement('div');
     h.className = 'hint';
     h.style.marginBottom = '.7rem';
-    h.textContent = 'Marca «Comparar» en dos combinaciones para verlas lado a lado con la diferencia. Pulsa una tarjeta para cargarla en la ficha de la izquierda.';
+    h.textContent = 'Pulsa «Ficha» para ver una combinación en la columna de la izquierda, y «A/B» en dos de ellas para compararlas.';
     body.appendChild(h);
   }
 
-  sorted.forEach((r, i) => {
+  shown.forEach((r, i) => {
     r.titulo = 'Combinación ' + (i+1);
     r.subtitulo = r.items.map(it => it.nombre).join(' · ');
     const card = document.createElement('div');
     card.className = 'combo-card'
       + (i === 0 && sortBy ? ' best' : '')
       + (sheetSource === r ? ' picked' : '');
+    const enAB = compareSelection.includes(r);
     card.innerHTML = `
       <div class="combo-head">
-        <label class="compare-toggle"><input type="checkbox" class="compare-checkbox"> Comparar</label>
+        <button class="btn-sheet${sheetSource === r ? ' sheet-on' : ''}">Ficha</button>
+        <button class="btn-ab${enAB ? ' on' : ''}">${enAB ? (compareSelection[0] === r ? 'A ✓' : 'B ✓') : 'A/B'}</button>
         ${i === 0 && sortBy ? '<span class="tag reliquia">Mejor</span>' : ''}
         <span class="rank">${i+1} / ${sorted.length}</span>
       </div>
       <div class="combo-pieces">${comboPiecesHtml(r)}</div>
       <div class="stats-grid">${buildStatsGridHtml(r)}</div>`;
-    const checkbox = card.querySelector('.compare-checkbox');
-    checkbox.checked = compareSelection.includes(r);
-    card.querySelector('.compare-toggle').onclick = (e) => e.stopPropagation();
-    checkbox.onclick = (e) => { e.stopPropagation(); toggleCompare(r); };
-    card.onclick = () => { sheetSource = r; renderResults(); renderSheet(); };
+    card.querySelector('.btn-sheet').onclick = () => { sheetSource = r; renderResults(); renderSheet(); };
+    card.querySelector('.btn-ab').onclick = () => toggleCompare(r);
     wirePieces(card, r);
     body.appendChild(card);
   });
+
+  if (sorted.length > shown.length){
+    const note = document.createElement('div');
+    note.className = 'cap-note';
+    note.textContent = 'Mostrando las ' + shown.length + ' mejores de ' + sorted.length
+      + (sortBy ? ' (ordenadas por ' + sortBy + ').' : '.');
+    body.appendChild(note);
+  }
   panel.appendChild(body);
   resultsPanel.appendChild(panel);
 
-  if (!sheetSource) sheetSource = sorted[0];
+  if (!sheetSource || !lastResults.includes(sheetSource)) sheetSource = shown[0];
   renderSheet();
 }
 
@@ -1447,10 +1565,14 @@ function renderComparePanel(){
     </div>`;
 
   const statKeys = new Set([...Object.keys(a.stats), ...Object.keys(b.stats)]);
-  const diffRows = [...statKeys]
-    .map(k => ({ stat: k, diff: (b.stats[k] || 0) - (a.stats[k] || 0) }))
-    .filter(r => r.diff !== 0)
-    .sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
+  const diffs = {};
+  statKeys.forEach(k => {
+    const d = (b.stats[k] || 0) - (a.stats[k] || 0);
+    if (d !== 0) diffs[k] = d;
+  });
+  // Mismo orden que la ficha y que las tarjetas, para poder leer las tres
+  // columnas en paralelo sin buscar cada stat.
+  const diffRows = flatOrderedStats(diffs).map(([stat, diff]) => ({ stat, diff }));
 
   const diffHtml = diffRows.length
     ? diffRows.map(r => {
