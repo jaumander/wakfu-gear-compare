@@ -207,10 +207,6 @@
     font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);
     background:rgba(255,255,255,.04);border-radius:4px;padding:0 .3rem;flex:none;
   }
-  details.srow-d .sub-note{
-    font-size:.68rem;color:var(--text-dim);line-height:1.35;
-    padding:.3rem .4rem 0;text-wrap:pretty;
-  }
 
   .mode-toggle{display:flex;gap:.25rem;padding:.55rem .95rem;border-bottom:1px solid var(--border-soft);}
   .mode-toggle button{
@@ -1431,9 +1427,9 @@ function statRowHtml(k, v, r){
         return `<div class="srow">${statIcon(e.stat)}<span class="nm">${e.stat}</span>${x}<span class="v">${Math.round(e.aporta*100)/100}</span></div>`;
       })
       .join('');
-    return `<details class="srow-d">
+    return `<details class="srow-d" open>
       <summary>${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></summary>
-      <div class="sub">${sub}<div class="sub-note">Solo dominios elementales. Los secundarios (crítico, espalda, melé…) van en su propio bloque.</div></div>
+      <div class="sub">${sub}</div>
     </details>`;
   }
   return `<div class="srow">${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></div>`;
