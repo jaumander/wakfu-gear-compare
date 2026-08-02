@@ -443,9 +443,11 @@
   .tip .t-top{display:flex;gap:.6rem;align-items:center;padding-bottom:.55rem;border-bottom:1px solid var(--border-soft);}
   .tip .t-meta{flex:1;min-width:0;}
   .tip .t-lvl{
+    display:flex;align-items:center;gap:.35rem;
     font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-muted);
     text-transform:uppercase;letter-spacing:.06em;
   }
+  .tip .t-lvl img{width:20px;height:20px;object-fit:contain;flex:none;}
   .tip .t-sums{display:flex;flex-wrap:wrap;gap:.15rem .6rem;margin-top:.25rem;}
   .tip .t-sum{
     display:inline-flex;align-items:center;gap:.25rem;
@@ -995,6 +997,14 @@ document.body.appendChild(tipEl);
 
 function attachTip(el, it){ el.dataset.tip = '1'; el.__item = it; return el; }
 
+/* Icono del TIPO de objeto (casco, amuleto, botas...). wakassets lo sirve en
+   itemTypes/{itemTypeId}.png; build_dataset.py guarda ese id como `tipo_id`.
+   Si el dataset aún no lo trae, simplemente no se pinta. */
+function typeIconHtml(it){
+  const t = it.tipo_id ?? it.tipoId ?? null;
+  return t ? `<img src="${ASSETS}/itemTypes/${t}.png" alt="" onerror="this.remove()">` : '';
+}
+
 function tipHtml(it){
   const { stats } = foldElementalStats(it.stats);
   let dom = 0, res = 0;
@@ -1016,7 +1026,7 @@ function tipHtml(it){
     <div class="t-top">
       ${itemIconHtml(it)}
       <div class="t-meta">
-        <div class="t-lvl">Niv. ${it.nivel} · ${it.slot}</div>
+        <div class="t-lvl">${typeIconHtml(it)}<span>Niv. ${it.nivel} · ${it.slot}</span></div>
         <div class="t-sums">
           <span class="t-sum" title="Dominio acumulado">${statIconSmall('Dominio elemental total')}${rounded(dom)}</span>
           <span class="t-sum" title="Resistencia acumulada">${statIconSmall('Resistencia elemental total')}${rounded(res)}</span>
