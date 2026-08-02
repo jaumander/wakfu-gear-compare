@@ -165,7 +165,7 @@
     <h2>Candidatos</h2>
     <div class="slots" id="slots"></div>
     <div class="toolbar">
-      <button id="add-slot-btn">+ Añadir cubo (ej. Anillo 2)</button>
+      <button id="add-slot-btn">+ Añadir slot (ej. Anillo 2)</button>
     </div>
   </div>
 
@@ -284,8 +284,8 @@ function doSearch(){
       <span class="nivel">nvl ${it.nivel}</span>
       <span class="nivel">${it.slot}</span>
     `;
-    // Desplegable con los cubos existentes, para elegir claramente a cuál
-    // añadir el candidato. Si solo hay un cubo se añade directo, sin desplegable.
+    // Desplegable con los slots existentes, para elegir claramente a cuál
+    // añadir el candidato. Si solo hay un slot se añade directo, sin desplegable.
     if (slotLabels.length > 1){
       const bucketSelect = document.createElement('select');
       bucketSelect.className = 'bucket-select';
@@ -334,7 +334,7 @@ function renderSlots(){
     nameInput.onchange = (e) => renameSlot(label, e.target.value);
     const removeBtn = document.createElement('button');
     removeBtn.className = 'remove';
-    removeBtn.textContent = 'Quitar cubo';
+    removeBtn.textContent = 'Quitar slot';
     removeBtn.onclick = () => removeSlot(label);
     header.appendChild(nameInput);
     header.appendChild(removeBtn);
@@ -373,12 +373,14 @@ function renameSlot(oldLabel, newLabel){
   candidatesBySlot[newLabel] = candidatesBySlot[oldLabel];
   delete candidatesBySlot[oldLabel];
   renderSlots();
+  doSearch();
 }
 
 function removeSlot(label){
   slotLabels = slotLabels.filter(s => s !== label);
   delete candidatesBySlot[label];
   renderSlots();
+  doSearch();
 }
 
 document.getElementById('add-slot-btn').onclick = () => {
@@ -388,6 +390,7 @@ document.getElementById('add-slot-btn').onclick = () => {
   slotLabels.push(name);
   candidatesBySlot[name] = [];
   renderSlots();
+  doSearch();
 };
 
 function isValidCombo(combo){
@@ -417,7 +420,7 @@ function cartesian(arrays){
 document.getElementById('compare-btn').onclick = () => {
   const activeSlots = slotLabels.filter(s => (candidatesBySlot[s] || []).length > 0);
   if (activeSlots.length === 0){
-    resultsPanel.innerHTML = '<div class="empty-state">Añade al menos un candidato en algún cubo.</div>';
+    resultsPanel.innerHTML = '<div class="empty-state">Añade al menos un candidato en algún slot.</div>';
     return;
   }
   const optionLists = activeSlots.map(s => candidatesBySlot[s]);
