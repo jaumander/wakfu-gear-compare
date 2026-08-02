@@ -753,8 +753,8 @@
           <div class="lvl-track" id="lvl-track">
             <div class="rail"></div>
             <div class="fill" id="lvl-fill"></div>
-            <input type="range" id="level-min" min="1" max="245" value="1" step="1">
-            <input type="range" id="level-max" min="1" max="245" value="245" step="1">
+            <input type="range" id="level-min" min="0" max="15" value="0" step="1">
+            <input type="range" id="level-max" min="0" max="15" value="15" step="1">
           </div>
           <span class="lvl-val" id="lvl-val">1 - 245</span>
         </div>
@@ -1139,7 +1139,16 @@ const levelMinInput = document.getElementById('level-min');
 const levelMaxInput = document.getElementById('level-max');
 const levelValLabel = document.getElementById('lvl-val');
 const levelFill = document.getElementById('lvl-fill');
-const LVL_MIN = 1, LVL_MAX = 245;
+/* El slider ya no es "nivel a nivel" (era demasiado largo y fino para arrastrar
+   con precision): cada punto salta por las franjas que ya usa el resto de la
+   app (las mismas de la extinta levelRanges()). El punto IZQUIERDO salta por
+   el INICIO de cada franja (1, 21, 36, 51... 231) y el punto DERECHO por el
+   FINAL (20, 35, 50, 65... 245) — 16 paradas cada uno, misma cantidad, así que
+   comparten índice 0-15 y nunca se pueden cruzar (se clampan al mismo índice
+   como mucho), lo que de paso permite dejarlos los dos en la misma franja
+   (ej. los dos en el índice 15 = "231-245", todo lo de esa franja). */
+const LEVEL_LO_STOPS = [1,21,36,51,66,81,96,111,126,141,156,171,186,201,216,231];
+const LEVEL_HI_STOPS = [20,35,50,65,80,95,110,125,140,155,170,185,200,215,230,245];
 const resultsList = document.getElementById('results-list');
 const sortSelect = document.getElementById('sort-select');
 const resultsPanel = document.getElementById('results-panel');
@@ -1198,20 +1207,23 @@ function setupSlotFilter(){
   });
 }
 
-/* Slider de nivel de 2 puntos: nivel exacto arrastrable (no franjas fijas).
-   Los 2 <input type=range> se superponen (técnica estándar para "dual range")
-   y solo el pulgar (::-webkit/-moz-slider-thumb) tiene pointer-events, para que
-   el usuario pueda coger cualquiera de los dos aunque estén juntos. */
+/* Slider de nivel de 2 puntos, ahora por FRANJAS (no nivel a nivel, ver nota
+   sobre LEVEL_LO_STOPS/LEVEL_HI_STOPS más arriba). Los 2 <input type=range>
+   se superponen (técnica estándar para "dual range") y solo el pulgar
+   (::-webkit/-moz-slider-thumb) tiene pointer-events, para que el usuario
+   pueda coger cualquiera de los dos aunque estén en el mismo índice. */
 function updateLevelSliderUI(){
-  const pct = v => (v - LVL_MIN) / (LVL_MAX - LVL_MIN) * 100;
-  const lo = parseInt(levelMinInput.value, 10);
-  const hi = parseInt(levelMaxInput.value, 10);
-  levelFill.style.left = pct(lo) + '%';
-  levelFill.style.right = (100 - pct(hi)) + '%';
-  levelValLabel.textContent = lo + ' - ' + hi;
+  const loIdx = parseInt(levelMinInput.value, 10);
+  const hiIdx = parseInt(levelMaxInput.value, 10);
+  const pct = idx => idx / (LEVEL_LO_STOPS.length - 1) * 100;
+  levelFill.style.left = pct(loIdx) + '%';
+  levelFill.style.right = (100 - pct(hiIdx)) + '%';
+  levelValLabel.textContent = LEVEL_LO_STOPS[loIdx] + ' - ' + LEVEL_HI_STOPS[hiIdx];
 }
 
 function setupLevelFilter(){
+  // Los dos comparten el mismo rango de índices (0-15), así que un clamp
+  // simple ya impide que se crucen y permite que coincidan en el mismo punto.
   levelMinInput.addEventListener('input', () => {
     if (parseInt(levelMinInput.value, 10) > parseInt(levelMaxInput.value, 10)){
       levelMinInput.value = levelMaxInput.value;
@@ -1544,9 +1556,9 @@ function topStatsOf(it, n){
 function doSearch(){
   const q = searchInput.value.trim();
   const slot = slotFilter.value;
-  const lo = parseInt(levelMinInput.value, 10);
-  const hi = parseInt(levelMaxInput.value, 10);
-  const levelActive = !(lo === LVL_MIN && hi === LVL_MAX);
+  const lo = LEVEL_LO_STOPS[parseInt(levelMinInput.value, 10)];
+  const hi = LEVEL_HI_STOPS[parseInt(levelMaxInput.value, 10)];
+  const levelActive = !(lo === LEVEL_LO_STOPS[0] && hi === LEVEL_HI_STOPS[LEVEL_HI_STOPS.length - 1]);
   const countEl = document.getElementById('find-count');
   resultsList.innerHTML = '';
   if (!q){
