@@ -183,6 +183,21 @@
   .stat{font-family:'JetBrains Mono',monospace;font-size:.8rem;display:flex;justify-content:space-between;}
   .stat .v{font-weight:600;}
   .empty-state{color:var(--text-muted);font-size:.88rem;text-align:center;padding:1.5rem 0;}
+
+  .stat-clickable{cursor:pointer;}
+  .stat-clickable:hover{border:1px solid var(--ok);border-radius:4px;margin:-1px;}
+  .info-dot{color:var(--text-muted);font-size:.72rem;}
+
+  .modal-backdrop{
+    display:none;position:fixed;inset:0;background:rgba(8,9,14,.65);
+    align-items:center;justify-content:center;z-index:50;padding:1rem;
+  }
+  .modal{
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:1.1rem 1.25rem;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;
+  }
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;}
+  .modal-header h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;margin:0;}
 </style>
 </head>
 <body>
@@ -218,6 +233,16 @@
   </div>
 
   <div id="results-panel"></div>
+</div>
+
+<div class="modal-backdrop" id="breakdown-modal-backdrop" onclick="if(event.target===this) closeBreakdown()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="breakdown-modal-title">Desglose</h3>
+      <button class="remove" onclick="closeBreakdown()">Cerrar</button>
+    </div>
+    <div class="stats-grid" id="breakdown-modal-list"></div>
+  </div>
 </div>
 
 <script>
@@ -469,34 +494,98 @@ function sumStats(combo){
   return total;
 }
 
-// Las resistencias/dominios elementales de Ankama se dan de 3 formas: específicas
-// de un elemento (ej. "Resistencia al fuego"), "de todos" (aplica a los 4 elementos
-// siempre) o "en N elementos" (aplica a N elementos, sin especificar cuáles). Para
-// poder comparar un total real hay que multiplicar estas 2 últimas por cuántos
-// elementos cubren. Confirmado con datos reales: 234 vs 220 en el caso de prueba.
-function addElementalTotals(stats){
-  const withTotals = { ...stats };
+// Las resistencias/dominios elementales de Ankama se dan de varias formas: específicas
+// de un elemento (ej. "Resistencia al fuego", "Dominio de agua"), "de todos" (aplica a
+// los 4 elementos siempre), "en N elementos" (aplica a N elementos sin especificar
+// cuáles) o, en un puñado de objetos raros, sin número (tratado como 1 elemento sin
+// especificar). Mostrar las 6-8 líneas sueltas junto al total es confuso, así que se
+// pliegan todas en un único total ("Dominio/Resistencia elemental total") y el detalle
+// de qué las compone se guarda aparte para un desglose bajo demanda (ver breakdown).
+// Multiplicadores validados con datos reales: 234 vs 220 en el caso de prueba del usuario.
+const RESISTENCIA_ELEMENTO_KEYS = ['Resistencia al agua', 'Resistencia al aire', 'Resistencia al fuego', 'Resistencia a la tierra'];
+const DOMINIO_ELEMENTO_KEYS = ['Dominio de agua', 'Dominio de aire', 'Dominio de fuego', 'Dominio de tierra'];
+
+function foldElementalStats(stats){
+  const folded = {};
+  const breakdown = { 'Resistencia elemental total': [], 'Dominio elemental total': [] };
   let resTotal = 0;
   let domTotal = 0;
+
   Object.entries(stats).forEach(([k, v]) => {
-    if (/^Resistencia (al|a la) /.test(k)){
-      resTotal += v;
-    } else if (k === 'Resistencia elemental (todos)'){
-      resTotal += v * 4;
-    } else {
+    let isResComponent = false;
+    let isDomComponent = false;
+    let resMult = 1;
+    let domMult = 1;
+
+    if (RESISTENCIA_ELEMENTO_KEYS.includes(k)) { isResComponent = true; }
+    else if (k === 'Resistencia elemental (todos)') { isResComponent = true; resMult = 4; }
+    else if (k === 'Resistencia elemental') { isResComponent = true; }
+    else {
       const m = k.match(/^Resistencia elemental \((\d+) elementos\)$/);
-      if (m) resTotal += v * parseInt(m[1], 10);
+      if (m) { isResComponent = true; resMult = parseInt(m[1], 10); }
     }
-    if (k === 'Dominio elemental (todos)'){
-      domTotal += v * 4;
-    } else {
+
+    if (DOMINIO_ELEMENTO_KEYS.includes(k)) { isDomComponent = true; }
+    else if (k === 'Dominio elemental (todos)') { isDomComponent = true; domMult = 4; }
+    else if (k === 'Dominio elemental') { isDomComponent = true; }
+    else {
       const m2 = k.match(/^Dominio elemental \((\d+) elementos\)$/);
-      if (m2) domTotal += v * parseInt(m2[1], 10);
+      if (m2) { isDomComponent = true; domMult = parseInt(m2[1], 10); }
+    }
+
+    if (isResComponent){
+      resTotal += v * resMult;
+      breakdown['Resistencia elemental total'].push({ stat: k, value: v });
+    } else if (isDomComponent){
+      domTotal += v * domMult;
+      breakdown['Dominio elemental total'].push({ stat: k, value: v });
+    } else {
+      folded[k] = v;
     }
   });
-  if (resTotal > 0) withTotals['Resistencia elemental total'] = resTotal;
-  if (domTotal > 0) withTotals['Dominio elemental total'] = domTotal;
-  return withTotals;
+
+  if (resTotal > 0) folded['Resistencia elemental total'] = resTotal;
+  if (domTotal > 0) folded['Dominio elemental total'] = domTotal;
+
+  return { stats: folded, breakdown };
+}
+
+const ELEMENTAL_TOTAL_KEYS = ['Resistencia elemental total', 'Dominio elemental total'];
+
+// Registro de desgloses para el modal: cada total elemental clicado guarda aquí su
+// lista de componentes, y el HTML solo referencia el índice (evita tener que serializar
+// el desglose dentro del atributo onclick).
+let breakdownRegistry = [];
+
+function buildStatsGridHtml(r){
+  return Object.entries(r.stats)
+    .sort((a,b) => b[1]-a[1])
+    .map(([k,v]) => {
+      const rounded = Math.round(v*100)/100;
+      if (ELEMENTAL_TOTAL_KEYS.includes(k) && r.breakdown && r.breakdown[k] && r.breakdown[k].length){
+        const idx = breakdownRegistry.push({ title: k, entries: r.breakdown[k] }) - 1;
+        return `<div class="stat stat-clickable" onclick="openBreakdown(${idx})"><span>${statIcon(k)} ${k} <span class="info-dot">ⓘ</span></span><span class="v">${rounded}</span></div>`;
+      }
+      return `<div class="stat"><span>${statIcon(k)} ${k}</span><span class="v">${rounded}</span></div>`;
+    })
+    .join('');
+}
+
+function openBreakdown(idx){
+  const data = breakdownRegistry[idx];
+  if (!data) return;
+  document.getElementById('breakdown-modal-title').textContent = data.title;
+  const list = document.getElementById('breakdown-modal-list');
+  list.innerHTML = data.entries
+    .filter(e => e.value !== 0)
+    .sort((a,b) => b.value - a.value)
+    .map(e => `<div class="stat"><span>${statIcon(e.stat)} ${e.stat}</span><span class="v">${Math.round(e.value*100)/100}</span></div>`)
+    .join('') || '<div class="empty-hint">Sin componentes.</div>';
+  document.getElementById('breakdown-modal-backdrop').style.display = 'flex';
+}
+
+function closeBreakdown(){
+  document.getElementById('breakdown-modal-backdrop').style.display = 'none';
 }
 
 function cartesian(arrays){
@@ -515,11 +604,10 @@ document.getElementById('compare-btn').onclick = () => {
   }
   const optionLists = activeSlots.map(s => candidatesBySlot[s]);
   const combos = cartesian(optionLists).filter(isValidCombo);
-  lastResults = combos.map(combo => ({
-    labels: activeSlots,
-    items: combo,
-    stats: addElementalTotals(sumStats(combo))
-  }));
+  lastResults = combos.map(combo => {
+    const { stats, breakdown } = foldElementalStats(sumStats(combo));
+    return { labels: activeSlots, items: combo, stats, breakdown };
+  });
   compareSelection = [];
   renderResults();
 };
@@ -530,6 +618,7 @@ function renderResults(){
     resultsPanel.innerHTML = '<div class="empty-state">No hay combinaciones (o todas violan la regla de 1 reliquia / 1 épico).</div>';
     return;
   }
+  breakdownRegistry = [];
   const sortBy = sortSelect.value;
   let sorted = [...lastResults];
   if (sortBy){
@@ -556,10 +645,7 @@ function renderResults(){
                 : it.es_epico ? '<span class="tag epico">Épico</span>' : '';
       return `<div><span class="slot-name">${label}:</span> ${it.nombre} ${tag}</div>`;
     }).join('');
-    const statsHtml = Object.entries(r.stats)
-      .sort((a,b) => b[1]-a[1])
-      .map(([k,v]) => `<div class="stat"><span>${statIcon(k)} ${k}</span><span class="v">${Math.round(v*100)/100}</span></div>`)
-      .join('');
+    const statsHtml = buildStatsGridHtml(r);
     card.innerHTML = `
       <div class="combo-title">
         <label class="compare-toggle"><input type="checkbox" class="compare-checkbox"> Comparar</label>
@@ -597,10 +683,7 @@ function renderComparePanel(){
     return `<div><span class="slot-name">${label}:</span> ${it.nombre} ${tag}</div>`;
   }).join('');
 
-  const buildStatsHtml = (r) => Object.entries(r.stats)
-    .sort((x, y) => y[1] - x[1])
-    .map(([k, v]) => `<div class="stat"><span>${statIcon(k)} ${k}</span><span class="v">${Math.round(v * 100) / 100}</span></div>`)
-    .join('');
+  const buildStatsHtml = (r) => buildStatsGridHtml(r);
 
   const statKeys = new Set([...Object.keys(a.stats), ...Object.keys(b.stats)]);
   const diffRows = [...statKeys]
