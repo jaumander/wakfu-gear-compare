@@ -133,6 +133,31 @@ usa 2 o 3 (la mayoría de clases usan 2-3 elementos), como el "Nb éléments" de
   única, **0 objetos con "Stat desconocida" o "accion_XXX" sin resolver** en los 7730
   objetos del dataset.
 
+## HECHO: Armas de 2 manos bloquean la mano izquierda
+
+**Motivación:** algunas armas (Hacha, Pala, Martillo, Arco, Espada/Bastón "Dos manos")
+ocupan las dos manos en el juego real; la web dejaba añadir un candidato a "Mano izq."
+aunque "Mano derecha" tuviera una de éstas, generando combinaciones imposibles.
+
+**Campo real confirmado** (con JSON pegado por el usuario, salida de
+`diagnose_weapons2.py`): una arma de mano derecha es de 2 manos si su
+`equipmentDisabledPositions` incluye `"SECOND_WEAPON"`.
+
+**Decisión de UX** (confirmada con el usuario): en vez de bloquear al añadir o vaciar el
+otro slot, se quería poder comparar en la misma tabla "arma de 2 manos sola" vs "1 mano +
+objeto en la izquierda".
+
+**Implementación:**
+- `build_dataset.py`: `build_two_handed_set()` + campo `"es_dos_manos"` en cada objeto.
+- `index.html`: Mano derecha/Mano izq. se emparejan en el motor — si el candidato de la
+  derecha es de 2 manos, se genera 1 sola combinación con la izquierda "libre" (objeto
+  placeholder `MANO_LIBRE`, `es_hueco: true`, excluido del contador de piezas y del rango
+  de nivel) en vez de multiplicar por cada candidato de esa mano.
+- Validado: test unitario de `build_two_handed_set()` contra las 11 armas reales pegadas
+  por el usuario (6 de 2 manos detectadas bien); test del motor en Node (2 candidatos por
+  mano → 3 combinaciones crudas en vez de 4, todas válidas); dataset real regenerado por
+  el usuario y verificado: **509 armas de 2 manos** de 7730 objetos.
+
 ## Pendiente / decisiones abiertas
 - **"Poids" de Stratfu**: métrica de valor global de un objeto. No se sabe cómo la calculan
   y el propio usuario duda de su utilidad. Aplazado.
