@@ -1,3 +1,22 @@
+## Resumen de la sesión de hoy (2026-08-02, continuación) — nada a medias, todo commiteado y pusheado
+
+**Hecho hoy:**
+- Nombres de rareza añadidos en `index.html` (`RARITY_NAMES`): 5=Reliquia y 7=Épico
+  confirmados contra datos reales; 0,1,2,3,4,6 son hipótesis razonada (ver pendiente
+  "rareza" abajo).
+- Feature completa (milestones 1/2 y 2/2) de "dominio elemental limitado por nº de
+  elementos de la build": selector 2/3/4 en la ficha + `foldElementalStats()`/
+  `dominioPorItem()` capan el multiplicador del dominio (NO la resistencia, esa sigue
+  igual) con `min(elementos_del_objeto, buildElementCount)`, con aviso ⚠ + tooltip cuando
+  se cala. Validado con caso real (Varita de mago gris, 520 en 3 elementos): build 4/3 dan
+  1560 igual que antes, build 2 cala a 1040. Documentado en PROJECT.md.
+- Se subieron dos scripts de diagnóstico a la raíz del repo para que el USUARIO los
+  ejecute en su máquina (el entorno de Claude no tiene acceso a wakfu.cdn.ankama.com):
+  `diagnose_weapons.py` (ya ejecutado, ver pendiente "armas" abajo) y
+  `diagnose_stats.py` (aún NO ejecutado por el usuario).
+
+**Pendiente para la próxima sesión (ninguno bloquea el uso normal de la web):**
+
 ## Pendiente: armas a dos manos no aparecen en el buscador
 - Descartada la sospecha inicial (no existe ningún `equipmentPositions` tipo BOTH_HANDS;
   el usuario ejecutó `diagnose_weapons.py` y solo salieron FIRST_WEAPON/SECOND_WEAPON, más
@@ -15,8 +34,12 @@
 - Se subió `diagnose_stats.py` (raíz del repo) que: 1) busca ese objeto exacto y muestra el
   actionId/descripción cruda detrás de cada efecto, y 2) barre TODOS los actionIds usados
   en items reales para encontrar de una vez cualquier otro caso que caiga en "Stat
-  desconocida". Pendiente de que el usuario lo ejecute (`git pull && python
-  diagnose_stats.py`) y pegue la salida.
+  desconocida". **Pendiente de que el usuario lo ejecute** (`git pull && python
+  diagnose_stats.py` — ya tiene el repo clonado y `data/` cacheado en su máquina Windows)
+  **y pegue la salida en el chat.** Con esa salida, el siguiente Claude debe: identificar
+  el actionId real detrás de "armadura dada", arreglar `clean_stat_label()` o añadir un
+  caso especial en `build_dataset.py` (como se hizo con el dominio/resistencia elemental),
+  y pedir al usuario que regenere y suba `items_reduced.json`.
 
 ## Pendiente: rareza
 - 5=Reliquia y 7=Épico ya confirmados contra datos reales. El resto (0 Común, 1 Poco
