@@ -166,11 +166,12 @@
     font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.92rem;margin-bottom:.6rem;
   }
   .diff-row{
-    display:flex;justify-content:space-between;align-items:baseline;
-    font-size:.88rem;padding:.4rem 0;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;gap:.5rem;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
+    padding:.4rem .6rem;font-size:.85rem;
   }
-  .diff-row:last-child{border-bottom:none;}
-  .diff-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.9rem;}
+  .diff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.5rem .7rem;}
+  .diff-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.85rem;white-space:nowrap;}
   .diff-val.positive{color:var(--ok);}
   .diff-val.negative{color:var(--danger);}
   .combo-items{font-size:.85rem;color:var(--text);margin-bottom:.6rem;}
@@ -436,6 +437,21 @@ document.getElementById('add-slot-btn').onclick = () => {
   doSearch();
 };
 
+function statIcon(name){
+  const n = name.toLowerCase();
+  if (n === 'pa' || n.includes('pa máx')) return '⭐';
+  if (n === 'pm' || n.includes('pm máx')) return '👣';
+  if (n.includes('pdv') || n.includes('vida')) return '❤️';
+  if (n.includes('resistencia')) return '🛡️';
+  if (n.includes('dominio')) return '⚔️';
+  if (n.includes('esquiva')) return '💨';
+  if (n.includes('placaje')) return '🪝';
+  if (n.includes('crítico')) return '🎯';
+  if (n.includes('anticipaci')) return '⏳';
+  if (n.includes('alcance')) return '🏹';
+  return '🔸';
+}
+
 function isValidCombo(combo){
   const relics = combo.filter(it => it.es_reliquia).length;
   const epics = combo.filter(it => it.es_epico).length;
@@ -511,7 +527,7 @@ function renderResults(){
     }).join('');
     const statsHtml = Object.entries(r.stats)
       .sort((a,b) => b[1]-a[1])
-      .map(([k,v]) => `<div class="stat"><span>${k}</span><span class="v">${Math.round(v*100)/100}</span></div>`)
+      .map(([k,v]) => `<div class="stat"><span>${statIcon(k)} ${k}</span><span class="v">${Math.round(v*100)/100}</span></div>`)
       .join('');
     card.innerHTML = `
       <div class="combo-title">
@@ -552,7 +568,7 @@ function renderComparePanel(){
 
   const buildStatsHtml = (r) => Object.entries(r.stats)
     .sort((x, y) => y[1] - x[1])
-    .map(([k, v]) => `<div class="stat"><span>${k}</span><span class="v">${Math.round(v * 100) / 100}</span></div>`)
+    .map(([k, v]) => `<div class="stat"><span>${statIcon(k)} ${k}</span><span class="v">${Math.round(v * 100) / 100}</span></div>`)
     .join('');
 
   const statKeys = new Set([...Object.keys(a.stats), ...Object.keys(b.stats)]);
@@ -562,11 +578,11 @@ function renderComparePanel(){
     .sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
 
   const diffHtml = diffRows.length
-    ? diffRows.map(r => {
+    ? '<div class="diff-grid">' + diffRows.map(r => {
         const cls = r.diff > 0 ? 'positive' : 'negative';
         const sign = r.diff > 0 ? '+' : '';
-        return `<div class="diff-row"><span>${r.stat}</span><span class="diff-val ${cls}">${sign}${Math.round(r.diff * 100) / 100}</span></div>`;
-      }).join('')
+        return `<div class="diff-row"><span>${statIcon(r.stat)} ${r.stat}</span><span class="diff-val ${cls}">${sign}${Math.round(r.diff * 100) / 100}</span></div>`;
+      }).join('') + '</div>'
     : '<div class="diff-row"><span>Ambas combinaciones dan exactamente los mismos stats.</span></div>';
 
   const panel = document.createElement('div');
