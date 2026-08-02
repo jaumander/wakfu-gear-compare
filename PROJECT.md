@@ -75,6 +75,11 @@ y en español.
   el dataset publicado — la web ya muestra los nombres correctos sin pasos adicionales.
 
 ## Pendiente / decisiones abiertas
+- **Rediseño visual con Claude Design (en cola, sin empezar)**: el usuario va a dar acceso
+  al repo a Claude Design para rehacer el diseño de `index.html` inspirándose en Wakfuli,
+  Zenith y Stratfu. Ya se investigó de dónde sacar los iconos de objetos/estadísticas/
+  rareza que usan esas webs (fuente oficial de Ankama + repo comunitario de respaldo) —
+  ver el checklist completo en HANDOFF.md antes de tocar el diseño.
 - Confirmar la tabla completa de valores de `rareza` (se han visto 1-4 en items de nivel
   bajo; falta mapear qué número corresponde a legendario/mítico/recuerdo, para poder
   filtrar por rareza además de por reliquia/épico).
