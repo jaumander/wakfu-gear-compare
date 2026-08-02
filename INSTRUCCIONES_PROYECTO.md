@@ -4,14 +4,14 @@ actions.json) y calcula combinaciones válidas de equipo respetando la restricci
 "máx. 1 reliquia y máx. 1 épico equipados a la vez".
 
 Este proyecto no tiene archivos subidos en la sección de archivos del proyecto — todo vive
-en GitHub (https://github.com/<TU_USUARIO>/wakfu-gear-compare, rama main).
+en GitHub (https://github.com/jaumander/wakfu-gear-compare, rama main).
 
 Al empezar cualquier conversación donde haya que tocar el código o el PROJECT.md:
 1. Clona el repo con git usando el token de abajo.
 2. Lee HANDOFF.md en la raíz: si dice "Nada en curso", trabaja normal desde PROJECT.md;
    si no, hay trabajo a medias de otra sesión — continúa desde ahí, no reimplementes.
 
-token_for_claude: <PENDIENTE — pega aquí tu token con permisos solo sobre este repo>
+token_for_claude: <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>
 
 Antes de tocar código o asumir un campo/formato del JSON de Ankama (mapeo de itemTypeId a
 slot, valores de "rareza", qué actionId corresponde a qué stat, etc.), verifica el dato real
