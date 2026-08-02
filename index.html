@@ -349,6 +349,17 @@
   }
   .lvl-track input[type=range]::-webkit-slider-runnable-track{background:transparent;}
   .lvl-track input[type=range]::-moz-range-track{background:transparent;border:none;}
+
+  /* ---------- iconos de filtro por rareza (apagar/encender) ---------- */
+  .rarity-filter{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.5rem;}
+  .rarity-filter .r-toggle{
+    width:30px;height:30px;border-radius:8px;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--surface-2);border:1px solid var(--border);cursor:pointer;
+    opacity:.32;transition:opacity .15s,border-color .15s,box-shadow .15s;
+  }
+  .rarity-filter .r-toggle img{width:19px;height:19px;object-fit:contain;}
+  .rarity-filter .r-toggle.on{opacity:1;border-color:var(--r-color,var(--border));box-shadow:0 0 8px -2px var(--r-color,transparent);}
   input[type=text], select{
     background:var(--surface-2);
     border:1px solid var(--border);
@@ -733,6 +744,7 @@
           </div>
           <span class="lvl-val" id="lvl-val">1 - 245</span>
         </div>
+        <div class="rarity-filter" id="rarity-filter"></div>
         <div class="find-msg" id="results-list"></div>
       </div>
     </div>
@@ -1097,6 +1109,29 @@ const LVL_MIN = 1, LVL_MAX = 245;
 const resultsList = document.getElementById('results-list');
 const sortSelect = document.getElementById('sort-select');
 const resultsPanel = document.getElementById('results-panel');
+
+/* Rarezas ocultas del buscador (vacio = todas visibles, por defecto). No
+   depende del dataset (RARITY_NAMES es fijo), asi que se puede montar sin
+   esperar a que carguen los items. */
+const excludedRarities = new Set();
+function setupRarityFilter(){
+  const wrap = document.getElementById('rarity-filter');
+  wrap.innerHTML = '';
+  Object.keys(RARITY_NAMES).map(Number).sort((a,b) => a - b).forEach(r => {
+    const btn = document.createElement('div');
+    btn.className = 'r-toggle on';
+    btn.style.setProperty('--r-color', rarityColor(r));
+    btn.title = 'Ocultar/mostrar ' + rarityName(r);
+    btn.innerHTML = `<img src="${ASSETS}/rarities/${r}.png" alt="${rarityName(r)}" onerror="this.remove()">`;
+    btn.onclick = () => {
+      if (excludedRarities.has(r)) excludedRarities.delete(r); else excludedRarities.add(r);
+      btn.classList.toggle('on');
+      doSearch();
+    };
+    wrap.appendChild(btn);
+  });
+}
+setupRarityFilter();
 
 fetch(RAW_URL)
   .then(r => {
@@ -1492,6 +1527,7 @@ function doSearch(){
     tokens.every(t => it._n.includes(t))
     && (!slot || it.slot === slot)
     && (!levelActive || (it.nivel >= lo && it.nivel <= hi))
+    && !excludedRarities.has(it.rareza)
   );
   const matches = all.slice(0, 60);
   countEl.textContent = all.length + (all.length > 60 ? ' (muestra 60)' : '');
