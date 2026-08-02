@@ -421,6 +421,7 @@
   }
   .tag.reliquia{background:rgba(241,193,58,.16);color:var(--reliquia);border:1px solid rgba(241,193,58,.3);}
   .tag.epico{background:rgba(192,123,240,.14);color:var(--epico);border:1px solid rgba(192,123,240,.3);}
+  .tag.dosmanos{background:rgba(120,144,192,.14);color:#9fb4dd;border:1px solid rgba(120,144,192,.3);}
 
   button{
     background:var(--surface-2);border:1px solid var(--border);color:var(--text);
@@ -1245,8 +1246,10 @@ function renderCandidates(){
 }
 
 function tagFor(it){
-  return it.es_reliquia ? '<span class="tag reliquia">Reliquia</span>'
-       : it.es_epico ? '<span class="tag epico">Épico</span>' : '';
+  const rareza = it.es_reliquia ? '<span class="tag reliquia">Reliquia</span>'
+               : it.es_epico ? '<span class="tag epico">Épico</span>' : '';
+  const dosManos = it.es_dos_manos ? '<span class="tag dosmanos">Dos manos</span>' : '';
+  return rareza + dosManos;
 }
 
 /* =========================================================================
