@@ -123,6 +123,16 @@ usa 2 o 3 (la mayoría de clases usan 2-3 elementos), como el "Nb éléments" de
       el usuario. Al cambiar el selector con resultados ya calculados, se recalcula el
       dominio sin rehacer el cartesiano (`refoldResults()`).
 
+- Arreglado el "Stat desconocida" que quedaba en `build_dataset.py`: actionId 39/40
+  (plantilla rota en `actions.json`) resultaban ser "Armadura dada"/"Armadura recibida",
+  confirmado con capturas reales del propio juego (no por texto de Ankama, que ahí no
+  sirve). ActionId 304 resultó ser el efecto de **pasivas únicas** de texto libre (objetos
+  épicos/reliquia con habilidad especial), así que en vez de mostrar un número sin sentido
+  se marca como "Pasiva única (ver descripción del objeto)". Dataset real regenerado y
+  verificado: 126 objetos con Armadura dada, 89 con Armadura recibida, 80 con Pasiva
+  única, **0 objetos con "Stat desconocida" o "accion_XXX" sin resolver** en los 7730
+  objetos del dataset.
+
 ## Pendiente / decisiones abiertas
 - **"Poids" de Stratfu**: métrica de valor global de un objeto. No se sabe cómo la calculan
   y el propio usuario duda de su utilidad. Aplazado.
@@ -135,10 +145,10 @@ usa 2 o 3 (la mayoría de clases usan 2-3 elementos), como el "Nb éléments" de
   corregirlo.
 - Nombres de estadística sin unificar del todo: "PdV" y "Punto de vida" son la misma stat
   (Vida) pero Ankama los describe con dos textos distintos en su JSON; de momento quedan
-  como dos claves separadas. También queda un cajón "Stat desconocida" (otras descripciones
-  rotas en el propio JSON de Ankama distintas a las ya arregladas, no arreglable desde aquí
-  sin más ejemplos reales) y una etiqueta suelta en francés. Ninguno de los dos bloquea el
-  uso normal de la herramienta.
+  como dos claves separadas. No bloquea el uso normal de la herramienta.
+- Arma a dos manos que el usuario buscó y no le apareció en el buscador: pendiente de que
+  diga el nombre exacto para rastrearla en el JSON crudo (ver detalle en commits de sesión;
+  no es un bug confirmado, solo una sospecha sin verificar todavía).
 - v2 (nice-to-have, sin comprometer ahora): optimización global de las 12 piezas a la vez,
   UI web, soporte de sublimaciones épicas/de reliquia, auto-detección de nueva versión del
   juego.
