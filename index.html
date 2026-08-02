@@ -85,11 +85,11 @@
   }
   .brand{display:flex;align-items:center;gap:.6rem;}
   .brand .mark{
-    width:30px;height:30px;border-radius:8px;flex:none;
-    background:linear-gradient(145deg,#f1c13a,#b07d10);
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.28), 0 2px 8px rgba(241,193,58,.28);
-    display:grid;place-items:center;color:#221800;font-family:'Baloo 2';font-weight:800;font-size:15px;
+    width:34px;height:34px;flex:none;
+    display:grid;place-items:center;
+    filter:drop-shadow(0 2px 6px rgba(241,193,58,.35));
   }
+  .brand .mark img{width:100%;height:100%;object-fit:contain;}
   .brand h1{
     font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.18rem;margin:0;letter-spacing:.01em;
   }
@@ -110,10 +110,13 @@
   @media (max-width:1100px){ .layout{grid-template-columns:1fr;} }
 
   .panel{
-    background:linear-gradient(180deg,var(--surface),var(--bg-2));
+    position:relative;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,.028) 1px, transparent 0) 0 0/16px 16px,
+      linear-gradient(180deg,var(--surface),var(--bg-2));
     border:1px solid var(--border);
     border-radius:12px;
-    box-shadow:0 8px 26px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.035);
+    box-shadow:0 8px 26px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.045);
   }
   .panel + .panel{margin-top:1rem;}
   .panel-head{
@@ -176,6 +179,7 @@
   .srow.clickable{cursor:pointer;}
   .srow.clickable:hover{background:rgba(241,193,58,.10);}
   .sheet-empty{padding:1.6rem .95rem;text-align:center;color:var(--text-dim);font-size:.82rem;}
+  .sheet-empty img{width:56px;height:56px;opacity:.22;display:block;margin:0 auto .7rem;}
 
   /* la ficha acompaña al scroll: debajo no hay nada más en esa columna */
   .sheet-wrap{position:sticky;top:74px;max-height:calc(100vh - 90px);overflow-y:auto;}
@@ -216,23 +220,31 @@
   }
   .gear-slot{
     position:relative;cursor:pointer;
-    background:var(--surface-2);
+    background:linear-gradient(180deg,#242938,#1a1e2a);
     border:1px solid var(--border);
     border-radius:10px;
     padding:.45rem .35rem .4rem;
     text-align:center;
-    transition:border-color .12s ease, transform .12s ease, background .12s ease;
+    transition:border-color .14s ease, transform .14s ease, box-shadow .14s ease;
   }
-  .gear-slot:hover{border-color:#4a5473;transform:translateY(-1px);}
-  .gear-slot.active{border-color:var(--gold);background:rgba(241,193,58,.08);box-shadow:0 0 0 1px rgba(241,193,58,.28);}
+  .gear-slot:hover{border-color:#59648a;transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.4);}
+  .gear-slot.active{
+    border-color:var(--gold);
+    box-shadow:0 0 0 1px rgba(241,193,58,.35), 0 0 18px -4px rgba(241,193,58,.5);
+  }
   .gear-slot .frame{
-    width:52px;height:52px;margin:0 auto .3rem;border-radius:8px;
-    background:radial-gradient(circle at 50% 30%, #2b3145, #171b26);
-    border:2px solid #39415a;
+    width:52px;height:52px;margin:0 auto .3rem;border-radius:9px;
+    background:radial-gradient(circle at 50% 22%, #333a51, #14171f 78%);
+    border:2px solid #3b4359;
     display:grid;place-items:center;overflow:hidden;position:relative;
-    box-shadow:inset 0 0 8px rgba(0,0,0,.65);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.75), inset 0 -1px 0 rgba(255,255,255,.06);
+    transition:box-shadow .16s ease, border-color .16s ease;
   }
   .gear-slot .frame img{width:100%;height:100%;object-fit:contain;}
+  /* icono del tipo de slot cuando esta vacio: apagado, como una silueta */
+  .gear-slot .frame img.ghost{
+    width:64%;height:64%;opacity:.26;filter:grayscale(1) brightness(1.5);
+  }
   .gear-slot .frame .letter{
     font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.25rem;color:#59627f;
   }
@@ -259,11 +271,11 @@
 
   /* ---------- iconos de objeto con marco de rareza ---------- */
   .itemicon{
-    width:44px;height:44px;flex:none;border-radius:8px;
+    width:44px;height:44px;flex:none;border-radius:9px;
     border:2px solid var(--border);
-    background:radial-gradient(circle at 50% 25%, #2b3145, #14171f);
+    background:radial-gradient(circle at 50% 22%, #313851, #14171f 78%);
     display:grid;place-items:center;position:relative;overflow:hidden;
-    box-shadow:inset 0 0 8px rgba(0,0,0,.6);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.7), inset 0 -1px 0 rgba(255,255,255,.05);
   }
   .itemicon.sm{width:30px;height:30px;border-radius:6px;}
   .itemicon img{width:100%;height:100%;object-fit:contain;}
@@ -293,10 +305,12 @@
   }
   .find-card{
     display:flex;gap:.6rem;align-items:flex-start;
-    background:var(--surface-2);border:1px solid var(--border);
+    background:linear-gradient(180deg,#232838,#1c202c);
+    border:1px solid var(--border);
     border-left-width:3px;border-radius:9px;padding:.5rem .55rem;
+    transition:border-color .12s ease, transform .12s ease, box-shadow .12s ease;
   }
-  .find-card:hover{border-color:#4a5473;}
+  .find-card:hover{border-color:#59648a;transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.35);}
   .find-card .body{flex:1;min-width:0;}
   .find-card .title{
     font-size:.84rem;font-weight:500;line-height:1.2;
@@ -353,7 +367,12 @@
     background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
     padding:.7rem .8rem;margin-bottom:.6rem;
   }
-  .combo-card.best{border-color:rgba(241,193,58,.55);box-shadow:0 0 0 1px rgba(241,193,58,.16);}
+  .combo-card.best{
+    border-color:rgba(241,193,58,.55);
+    box-shadow:0 0 0 1px rgba(241,193,58,.16), 0 0 22px -8px rgba(241,193,58,.55);
+  }
+  .combo-card{animation:pop .22s ease both;}
+  @keyframes pop{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
   .combo-card.picked{border-color:var(--ok);}
   .combo-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;}
   .combo-head .rank{
@@ -484,7 +503,7 @@
 
 <div class="topbar">
   <div class="brand">
-    <div class="mark">W</div>
+    <div class="mark"><img src="https://vertylo.github.io/wakassets/elements/chromatic.png" alt=""></div>
     <div>
       <h1>Wakfu Gear Compare</h1>
       <span>máx. 1 reliquia · máx. 1 épico</span>
@@ -616,19 +635,25 @@ const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u03
 /* Los 12 slots del personaje. `tipo` es el valor de `slot` tal cual viene del
    dataset (generado por POSITION_LABELS en build_dataset.py) — los dos anillos
    comparten tipo "Anillo" pero son slots distintos, igual que en el juego. */
+/* Icono del tipo de cada slot, para pintar la silueta cuando esta vacio (como en
+   la ficha del juego). El id de tipo se ha sacado del propio dataset: es el tipo
+   3-digitos mas frecuente entre los objetos de ese slot (casco 134, amuleto 120,
+   pechera 136, capa 132, hombreras 138, cinturon 133, botas 119, anillo 103,
+   emblema 646). Las dos manos no tienen un tipo unico (hay 11 tipos de arma), asi
+   que usan una espada generica y el escudo generico de wakassets. */
 const GEAR_SLOTS = [
-  { key:'Casco',        tipo:'Casco',                         corto:'Casco' },
-  { key:'Amuleto',      tipo:'Amuleto',                       corto:'Amuleto' },
-  { key:'Pechera',      tipo:'Pechera',                       corto:'Pechera' },
-  { key:'Capa',         tipo:'Capa',                          corto:'Capa' },
-  { key:'Hombreras',    tipo:'Hombreras',                     corto:'Hombreras' },
-  { key:'Cinturón',     tipo:'Cinturón',                      corto:'Cinturón' },
-  { key:'Botas',        tipo:'Botas',                         corto:'Botas' },
-  { key:'Anillo 1',     tipo:'Anillo',                        corto:'Anillo 1' },
-  { key:'Anillo 2',     tipo:'Anillo',                        corto:'Anillo 2' },
-  { key:'Mano derecha', tipo:'Mano Derecha (arma)',           corto:'Mano dcha.' },
-  { key:'Mano izq.',    tipo:'Mano Izquierda (arma/escudo)',  corto:'Mano izq.' },
-  { key:'Emblema',      tipo:'Emblema',                       corto:'Emblema' },
+  { key:'Casco',        tipo:'Casco',                         corto:'Casco',      ico:'itemTypes/134' },
+  { key:'Amuleto',      tipo:'Amuleto',                       corto:'Amuleto',    ico:'itemTypes/120' },
+  { key:'Pechera',      tipo:'Pechera',                       corto:'Pechera',    ico:'itemTypes/136' },
+  { key:'Capa',         tipo:'Capa',                          corto:'Capa',       ico:'itemTypes/132' },
+  { key:'Hombreras',    tipo:'Hombreras',                     corto:'Hombreras',  ico:'itemTypes/138' },
+  { key:'Cinturón',     tipo:'Cinturón',                      corto:'Cinturón',   ico:'itemTypes/133' },
+  { key:'Botas',        tipo:'Botas',                         corto:'Botas',      ico:'itemTypes/119' },
+  { key:'Anillo 1',     tipo:'Anillo',                        corto:'Anillo 1',   ico:'itemTypes/103' },
+  { key:'Anillo 2',     tipo:'Anillo',                        corto:'Anillo 2',   ico:'itemTypes/103' },
+  { key:'Mano derecha', tipo:'Mano Derecha (arma)',           corto:'Mano dcha.', ico:'itemTypes/109' },
+  { key:'Mano izq.',    tipo:'Mano Izquierda (arma/escudo)',  corto:'Mano izq.',  ico:'icons/shield' },
+  { key:'Emblema',      tipo:'Emblema',                       corto:'Emblema',    ico:'itemTypes/646' },
 ];
 GEAR_SLOTS.forEach(s => candidatesBySlot[s.key] = []);
 
@@ -657,7 +682,8 @@ function itemIconHtml(it, small){
   const inner = url
     ? `<img src="${url}" alt="" onerror="this.remove()">`
     : `<span class="letter">${(it.nombre||'?').trim().charAt(0).toUpperCase()}</span>`;
-  return `<div class="itemicon${small?' sm':''}" style="border-color:${rarityColor(it.rareza)}">${inner}</div>`;
+  const c = rarityColor(it.rareza);
+  return `<div class="itemicon${small?' sm':''}" style="border-color:${c};box-shadow:inset 0 2px 6px rgba(0,0,0,.7), 0 0 12px -3px ${c}">${inner}</div>`;
 }
 
 /* =========================================================================
@@ -961,12 +987,15 @@ function renderGear(){
     const el = document.createElement('div');
     el.className = 'gear-slot' + (activeSlot === s.key ? ' active' : '');
     el.title = s.key + (cands.length ? ' — ' + cands.length + ' candidato(s)' : '');
-    const frameStyle = first ? ` style="border-color:${rarityColor(first.rareza)}"` : '';
+    const c = first ? rarityColor(first.rareza) : null;
+    const frameStyle = c
+      ? ` style="border-color:${c};box-shadow:inset 0 2px 6px rgba(0,0,0,.7), 0 0 14px -3px ${c}"`
+      : '';
     const inner = first
       ? (itemIconUrl(first)
           ? `<img src="${itemIconUrl(first)}" alt="" onerror="this.remove()">`
           : `<span class="letter">${first.nombre.trim().charAt(0).toUpperCase()}</span>`)
-      : `<span class="letter" style="opacity:.35">+</span>`;
+      : `<img class="ghost" src="${ASSETS}/${s.ico}.png" alt="">`;
     el.innerHTML = `
       <span class="n${cands.length ? '' : ' zero'}">${cands.length}</span>
       <div class="frame"${frameStyle}>${inner}</div>
@@ -1380,7 +1409,10 @@ function renderSheet(){
     document.getElementById('sheet-sub').textContent = 'Sin combinación seleccionada';
     document.getElementById('pill-pieces').textContent = '0 piezas';
     document.getElementById('pill-lvl').textContent = 'nvl —';
-    body.innerHTML = `<div class="sheet-empty">Añade candidatos a los slots y pulsa<br><strong>Calcular combinaciones</strong>.<br>La ficha mostrará aquí los stats sumados.</div>`;
+    body.innerHTML = `<div class="sheet-empty">
+      <img src="${ASSETS}/elements/chromatic.png" alt="">
+      Añade candidatos a los slots y pulsa<br><strong>Calcular combinaciones</strong>.<br>La ficha mostrará aquí los stats sumados.
+    </div>`;
     return;
   }
   document.getElementById('sheet-title').textContent = r.titulo || 'Combinación';
