@@ -44,6 +44,16 @@ EMBLEM_TYPE_ID = 646
 RELIC_PROPERTY_ID = 8   # "solo 1 equipado a la vez" (reliquia)
 EPIC_PROPERTY_ID = 12   # "solo 1 equipado a la vez" (épico)
 
+# actionId confirmados manualmente contra el JSON crudo de Ankama (ver HANDOFF/PROJECT
+# para el detalle): la descripción oficial de estos 2 viene rota ("[#charac X] }"), así
+# que el nombre se fija a mano en vez de fiarse del texto de actions.json.
+#   1068 = Dominio elemental "en N elementos" (params[0]=valor, params[2]=nº elementos)
+#   1069 = Resistencia elemental "en N elementos" (mismo formato que 1068)
+#   80   = Resistencia elemental que aplica SIEMPRE a los 4 elementos (sin nº)
+#   120  = Dominio elemental que aplica SIEMPRE a los 4 elementos (sin nº)
+ELEMENTAL_N_ACTION_IDS = {1068: "Dominio elemental", 1069: "Resistencia elemental"}
+ELEMENTAL_ALL_ACTION_IDS = {80: "Resistencia elemental (todos)", 120: "Dominio elemental (todos)"}
+
 
 def fetch_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": "wakfu-gear-compare/1.0"})
@@ -142,7 +152,14 @@ def build_reduced_items(items, slot_map, action_map):
             value = params[0]
             if not isinstance(value, (int, float)):
                 continue
-            stat_name = action_map.get(action_id, f"accion_{action_id}")
+            if action_id in ELEMENTAL_N_ACTION_IDS:
+                count = params[2] if len(params) > 2 and isinstance(params[2], (int, float)) else None
+                base_label = ELEMENTAL_N_ACTION_IDS[action_id]
+                stat_name = f"{base_label} ({int(count)} elementos)" if count else base_label
+            elif action_id in ELEMENTAL_ALL_ACTION_IDS:
+                stat_name = ELEMENTAL_ALL_ACTION_IDS[action_id]
+            else:
+                stat_name = action_map.get(action_id, f"accion_{action_id}")
             stats[stat_name] = stats.get(stat_name, 0) + value
 
         title = entry.get("title", {})

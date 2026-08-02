@@ -439,6 +439,7 @@ document.getElementById('add-slot-btn').onclick = () => {
 
 function statIcon(name){
   const n = name.toLowerCase();
+  if (n.includes('total')) return '🧮';
   if (n === 'pa' || n.includes('pa máx')) return '⭐';
   if (n === 'pm' || n.includes('pm máx')) return '👣';
   if (n.includes('pdv') || n.includes('vida')) return '❤️';
@@ -468,6 +469,36 @@ function sumStats(combo){
   return total;
 }
 
+// Las resistencias/dominios elementales de Ankama se dan de 3 formas: específicas
+// de un elemento (ej. "Resistencia al fuego"), "de todos" (aplica a los 4 elementos
+// siempre) o "en N elementos" (aplica a N elementos, sin especificar cuáles). Para
+// poder comparar un total real hay que multiplicar estas 2 últimas por cuántos
+// elementos cubren. Confirmado con datos reales: 234 vs 220 en el caso de prueba.
+function addElementalTotals(stats){
+  const withTotals = { ...stats };
+  let resTotal = 0;
+  let domTotal = 0;
+  Object.entries(stats).forEach(([k, v]) => {
+    if (/^Resistencia (al|a la) /.test(k)){
+      resTotal += v;
+    } else if (k === 'Resistencia elemental (todos)'){
+      resTotal += v * 4;
+    } else {
+      const m = k.match(/^Resistencia elemental \((\d+) elementos\)$/);
+      if (m) resTotal += v * parseInt(m[1], 10);
+    }
+    if (k === 'Dominio elemental (todos)'){
+      domTotal += v * 4;
+    } else {
+      const m2 = k.match(/^Dominio elemental \((\d+) elementos\)$/);
+      if (m2) domTotal += v * parseInt(m2[1], 10);
+    }
+  });
+  if (resTotal > 0) withTotals['Resistencia elemental total'] = resTotal;
+  if (domTotal > 0) withTotals['Dominio elemental total'] = domTotal;
+  return withTotals;
+}
+
 function cartesian(arrays){
   return arrays.reduce((acc, arr) => {
     const res = [];
@@ -487,7 +518,7 @@ document.getElementById('compare-btn').onclick = () => {
   lastResults = combos.map(combo => ({
     labels: activeSlots,
     items: combo,
-    stats: sumStats(combo)
+    stats: addElementalTotals(sumStats(combo))
   }));
   compareSelection = [];
   renderResults();
