@@ -89,12 +89,21 @@ def build_slot_map(item_types):
 
 
 def clean_stat_label(raw_label):
-    """Limpia los placeholders tipo [#1], {...} de las descripciones oficiales."""
-    label = re.sub(r"\[#?\d+\]", "", raw_label)
-    label = re.sub(r"\[[a-zA-Z0-9]+\]", "", label)
+    """Limpia los placeholders de las descripciones oficiales de Ankama.
+
+    Los placeholders reales no son solo tipo [#1]: incluyen letras y espacios,
+    ej. "[#charac AP]  PA" o "[#charac BLOCK] -% de anticipación". Por eso se
+    quita CUALQUIER contenido entre corchetes, sin asumir que solo hay dígitos.
+    """
+    label = re.sub(r"\[.*?\]", "", raw_label)
     label = re.sub(r"\{.*?\}", "", label)
-    label = label.strip(" :%-\u00a0")
-    return label or "Stat desconocida"
+    label = label.strip()
+    label = re.sub(r"^[-%\s]+", "", label)       # restos de "-% " al principio
+    label = re.sub(r"^de\s+", "", label, flags=re.IGNORECASE)  # "de golpe crítico" -> "golpe crítico"
+    label = label.strip(" :%-\u00a0}")
+    if not label:
+        return "Stat desconocida"
+    return label[0].upper() + label[1:]
 
 
 def build_action_map(actions):

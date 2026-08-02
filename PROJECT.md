@@ -18,10 +18,26 @@ equipo, descartando automáticamente las que violan la regla de "máx. 1 reliqui
   reliquia en cada slot) que reproduce el caso real del usuario: de 4 combinaciones
   posibles, detecta y descarta correctamente la única inválida (2 reliquias a la vez).
 
+## Hecho (sesión 2026-08-02)
+- `items_reduced.json` ya tiene el dataset REAL del juego (versión 1.92.1.59, 7730 objetos
+  equipables), generado por el usuario en su máquina con `build_dataset.py`. Ya no es el
+  dataset sintético de 4 items.
+- Arreglado bug en `clean_stat_label()` (build_dataset.py): los placeholders de Ankama tipo
+  `[#charac AP]` no se quitaban porque la regex antigua solo esperaba dígitos entre
+  corchetes, no letras. Ahora se quita cualquier contenido entre corchetes. Se validó
+  reprocesando el dataset real: bajó de 58 nombres de estadística "sucios" a 37 limpios
+  (ej. antes "[#charac AP]  PA" y "[#charac AP] - PA máx." salían como texto crudo, ahora
+  "PA" y "PA máx.").
+
 ## Pendiente / decisiones abiertas
 - Confirmar la tabla completa de valores de `rareza` (se han visto 1-4 en items de nivel
   bajo; falta mapear qué número corresponde a legendario/mítico/recuerdo, para poder
   filtrar por rareza además de por reliquia/épico).
+- Nombres de estadística sin unificar del todo: "PdV" y "Punto de vida" son la misma stat
+  (Vida) pero Ankama los describe con dos textos distintos en su JSON; de momento quedan
+  como dos claves separadas. También queda un cajón "Stat desconocida" (descripciones rotas
+  en el propio JSON de Ankama, no arreglable desde aquí) y una etiqueta suelta en francés.
+  Ninguno de los dos bloquea el uso normal de la herramienta.
 - v2 (nice-to-have, sin comprometer ahora): optimización global de las 12 piezas a la vez,
   UI web, soporte de sublimaciones épicas/de reliquia, auto-detección de nueva versión del
   juego.
