@@ -95,7 +95,7 @@ el detalle completo, con los datos verificados y las decisiones tomadas, está e
   es para duelos cortos, no para optimizar un build entero.
 - GitHub Pages activado: https://jaumander.github.io/wakfu-gear-compare/
 
-## EN CURSO: Dominio elemental limitado por nº de elementos de la build
+## HECHO: Dominio elemental limitado por nº de elementos de la build
 
 **Motivación:** un objeto que da dominio a los 4 elementos infla el total si la build solo
 usa 2 o 3 (la mayoría de clases usan 2-3 elementos), como el "Nb éléments" de Stratfu.
@@ -114,12 +114,14 @@ usa 2 o 3 (la mayoría de clases usan 2-3 elementos), como el "Nb éléments" de
 
 **Milestones:**
 1/2 — HECHO: selector 2/3/4 en la ficha (junto al conmutador de modo) + estado
-      `buildElementCount` guardado. Por defecto 4 = mismo comportamiento que antes, así que
-      no cambia nada todavía (validado: la web sigue calculando igual que antes de este
-      milestone).
-2/2 — Pendiente: `foldElementalStats()` usa `buildElementCount` para capar el multiplicador
-      del dominio (no de la resistencia) + icono de aviso con tooltip cuando un objeto se
-      cala. También debería aplicarse al desglose por objeto (`dominioPorItem()`).
+      `buildElementCount` guardado.
+2/2 — HECHO: `foldElementalStats()` y `dominioPorItem()` capan el multiplicador del
+      DOMINIO (no la resistencia) con `min(elementos_del_objeto, buildElementCount)`, y
+      muestran un icono de aviso (⚠, con tooltip) cuando un objeto se cala. Validado con
+      el caso real de la Varita de mago gris (520 en 3 elementos): build=4 y build=3 dan
+      1560 (igual que antes), build=2 cala a 1040 y marca el aviso — igual que describió
+      el usuario. Al cambiar el selector con resultados ya calculados, se recalcula el
+      dominio sin rehacer el cartesiano (`refoldResults()`).
 
 ## Pendiente / decisiones abiertas
 - **"Poids" de Stratfu**: métrica de valor global de un objeto. No se sabe cómo la calculan

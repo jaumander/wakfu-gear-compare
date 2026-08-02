@@ -470,6 +470,10 @@
     background:rgba(239,95,116,.09);border:1px solid rgba(239,95,116,.35);
     color:#ffb3bf;border-radius:8px;padding:.5rem .7rem;font-size:.8rem;
   }
+  .dom-warn{
+    display:inline-block;color:var(--danger);font-size:.78rem;font-weight:700;
+    margin-left:.25rem;cursor:help;
+  }
   .cap-note{color:var(--text-dim);font-size:.78rem;text-align:center;padding:.7rem 0 .2rem;}
   .n-combos{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--text-muted);}
   .n-combos.over{color:var(--danger);font-weight:700;}
@@ -1516,11 +1520,12 @@ function dominioPorItem(combo, labels){
   const out = [];
   combo.forEach((it, i) => {
     Object.entries(it.stats).forEach(([k, v]) => {
-      const mult = domElemMult(k);
-      if (mult && v !== 0){
+      const rawMult = domElemMult(k);
+      if (rawMult && v !== 0){
+        const mult = Math.min(rawMult, buildElementCount);
         out.push({
           nombre: it.nombre, rareza: it.rareza, slot: (labels && labels[i]) || it.slot,
-          stat: k, value: v, mult, aporta: v * mult
+          stat: k, value: v, mult, rawMult, capped: rawMult > mult, aporta: v * mult
         });
       }
     });
@@ -1556,12 +1561,21 @@ function foldElementalStats(stats){
       if (m2) { isDomComponent = true; domMult = parseInt(m2[1], 10); }
     }
 
+    // Tope por nº de elementos de la build: si el objeto da a más elementos de
+    // los que la build usa, solo se aprovechan buildElementCount. Guardamos el
+    // crudo (rawDomMult) para poder avisar en la UI de cuánto se ha calado.
+    const rawDomMult = domMult;
+    if (isDomComponent) domMult = Math.min(domMult, buildElementCount);
+
     if (isResComponent){
       resTotal += v * resMult;
       breakdown['Resistencia elemental total'].push({ stat: k, value: v, mult: resMult, aporta: v * resMult });
     } else if (isDomComponent){
       domTotal += v * domMult;
-      breakdown['Dominio elemental total'].push({ stat: k, value: v, mult: domMult, aporta: v * domMult });
+      breakdown['Dominio elemental total'].push({
+        stat: k, value: v, mult: domMult, rawMult: rawDomMult,
+        capped: rawDomMult > domMult, aporta: v * domMult
+      });
     } else {
       folded[k] = v;
     }
@@ -1630,10 +1644,13 @@ function statRowHtml(k, v, r){
     const filas = r.domItems.map(e => {
       const val = Math.round(e.value*100)/100;
       const ap = Math.round(e.aporta*100)/100;
+      const warn = e.capped
+        ? `<span class="dom-warn" title="Este objeto da dominio a ${e.rawMult} elementos, pero tu build usa ${buildElementCount} — solo se cuentan ${e.mult}.">⚠</span>`
+        : '';
       return `<div class="srow dom-src" title="${e.slot} — ${e.stat}: ${val}${e.mult>1?' × '+e.mult+' elementos':''} = ${ap}">
         <span class="dot" style="background:${rarityColor(e.rareza)}"></span>
         <span class="nm">${e.nombre}</span>
-        <span class="mult">${val} ×${e.mult}</span>
+        <span class="mult">${val} ×${e.mult}</span>${warn}
         <span class="v">${ap}</span>
       </div>`;
     }).join('');
@@ -1660,7 +1677,10 @@ function statRowHtml(k, v, r){
         const t = e.mult > 1
           ? ` title="${e.stat}: ${Math.round(e.value*100)/100} × ${e.mult} elementos = ${Math.round(e.aporta*100)/100}"`
           : '';
-        return `<div class="srow"${t}>${statIcon(e.stat)}<span class="nm">${e.stat}</span>${x}<span class="v"${vStyle(e.stat, e.aporta)}>${Math.round(e.aporta*100)/100}</span></div>`;
+        const warn = e.capped
+          ? `<span class="dom-warn" title="Este objeto da dominio a ${e.rawMult} elementos, pero tu build usa ${buildElementCount} — solo se cuentan ${e.mult}.">⚠</span>`
+          : '';
+        return `<div class="srow"${t}>${statIcon(e.stat)}<span class="nm">${e.stat}</span>${x}${warn}<span class="v"${vStyle(e.stat, e.aporta)}>${Math.round(e.aporta*100)/100}</span></div>`;
       })
       .join('');
     return `<details class="srow-d" open>
@@ -1733,8 +1753,9 @@ document.getElementById('build-elem-toggle').onclick = (e) => {
   if (!btn) return;
   buildElementCount = parseInt(btn.dataset.elems, 10);
   document.querySelectorAll('#build-elem-toggle button').forEach(b => b.classList.toggle('on', b === btn));
-  // Milestone 2/2 hará que esto recalcule el dominio elemental con el tope.
-  // Por ahora no cambia nada más allá de guardar la elección.
+  if (lastResults.length) refoldResults();
+  renderSheet();
+  if (lastResults.length) renderResults();
 };
 
 /* =========================================================================
@@ -1775,6 +1796,21 @@ document.getElementById('compare-btn').onclick = () => {
   renderResults();
 };
 sortSelect.onchange = renderResults;
+
+/* Recalcula SOLO el dominio/resistencia elemental (foldElementalStats +
+   dominioPorItem) de los resultados ya generados. Se usa al cambiar el
+   selector "Mi build usa N elementos": no hace falta rehacer el producto
+   cartesiano ni el filtro de reliquia/épico, que no dependen de esto.
+   Muta los objetos existentes (no crea otros nuevos) para que sheetSource,
+   que puede apuntar a uno de ellos, siga viendo los datos actualizados. */
+function refoldResults(){
+  lastResults.forEach(r => {
+    const { stats, breakdown } = foldElementalStats(sumStats(r.items));
+    r.stats = stats;
+    r.breakdown = breakdown;
+    r.domItems = dominioPorItem(r.items, r.labels);
+  });
+}
 
 function comboPiecesHtml(r){
   return r.labels.map((label, idx) => {

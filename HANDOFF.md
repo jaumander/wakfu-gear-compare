@@ -1,36 +1,31 @@
-## En curso: Dominio elemental limitado por nº de elementos de la build
-- Milestone actual: 1/2 HECHO, 2/2 pendiente.
-- Qué está hecho: selector 2/3/4 en la ficha (junto al conmutador Personaje/Aptitudes),
-  estado `buildElementCount` (variable JS global). Por defecto 4 = comportamiento
-  idéntico al de antes (validado: JS sigue siendo sintácticamente correcto, dataset
-  sigue cargando los 7730 objetos, no se ha tocado ningún cálculo todavía).
-- Qué falta: `foldElementalStats()` (y `dominioPorItem()`, el desglose por objeto) deben
-  usar `buildElementCount` para capar el multiplicador del DOMINIO (no de la resistencia,
-  esa sigue igual) + icono de aviso con tooltip cuando un objeto se cala por dar a más
-  elementos de los que la build usa. Alcance completo escrito en PROJECT.md.
-- Archivos tocados en este milestone: index.html (UI del selector + estado), PROJECT.md
-  (alcance de la feature).
-- Último commit: "WIP: nombres de rareza ... " (incluye también el milestone 1, se
-  subieron juntos en un commit por rapidez — para el milestone 2/2 sí ir en su propio
-  commit).
-- Nada pendiente de confirmar con el usuario para el milestone 2/2, ya dijo "me parece
-  bien" al alcance completo.
+## Pendiente: armas a dos manos no aparecen en el buscador
+- Descartada la sospecha inicial (no existe ningún `equipmentPositions` tipo BOTH_HANDS;
+  el usuario ejecutó `diagnose_weapons.py` y solo salieron FIRST_WEAPON/SECOND_WEAPON, más
+  Herramienta/Emblema sin relación). Los arcos (arma de 2 manos típica) SÍ están en el
+  dataset (32 encontrados), solo que en un único slot ("Mano Derecha (arma)"), que es un
+  comportamiento aceptado, no un bug.
+- Pendiente de que el usuario diga el nombre exacto de un arma de dos manos que buscó y no
+  le apareció, para rastrearla paso a paso en el JSON crudo en vez de seguir adivinando.
 
-## Pendiente (sin relación con lo de arriba): armas a dos manos no aparecen en el buscador
-- Se sospecha que su itemTypeId usa un valor de `equipmentPositions` que
-  `build_dataset.py` no tiene mapeado en `POSITION_LABELS` (solo tiene FIRST_WEAPON/
-  SECOND_WEAPON), así que se descartan silenciosamente en `build_reduced_items()`.
-- Se subió `diagnose_weapons.py` (raíz del repo) para que el usuario lo ejecute con su
-  `itemTypes.json` cacheado y confirme qué valor real falta. El usuario intentó
-  ejecutarlo pero no tiene un clon local del repo — pendiente de que clone y lo corra.
-- En cuanto tengamos la salida, el fix es añadir esa entrada a `POSITION_LABELS` y
-  regenerar `items_reduced.json`.
+## Pendiente: stat "armadura dada" (y posibles casos similares) cae en "Stat desconocida"
+- El usuario encontró con capturas de pantalla que "Varita de mago gris" (nvl 245) da
+  "5% de armadura dada" en el juego, pero en la web ese valor (+5) sale como "Stat
+  desconocida" — su actionId debe tener una descripción rota en el JSON de Ankama, como ya
+  pasó antes con el dominio/resistencia elemental.
+- Se subió `diagnose_stats.py` (raíz del repo) que: 1) busca ese objeto exacto y muestra el
+  actionId/descripción cruda detrás de cada efecto, y 2) barre TODOS los actionIds usados
+  en items reales para encontrar de una vez cualquier otro caso que caiga en "Stat
+  desconocida". Pendiente de que el usuario lo ejecute (`git pull && python
+  diagnose_stats.py`) y pegue la salida.
 
-## Pendiente (sin relación con lo de arriba): rareza
+## Pendiente: rareza
 - 5=Reliquia y 7=Épico ya confirmados contra datos reales. El resto (0 Común, 1 Poco
   Común, 2 Raro, 3 Mítico, 4 Legendario, 6 Recuerdo) es la mejor hipótesis con la wiki
   oficial de Wakfu + el conteo real de objetos por valor, pero no verificado objeto a
   objeto in-game. Si el usuario ve un color/nombre que no cuadra al jugar, corregirlo.
+
+Nada más en curso (los dos milestones de esta feature están completos).
+
 
 ## Rediseño visual de index.html (Claude Design) — TERMINADO (sesión 2026-08-02)
 
