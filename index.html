@@ -426,6 +426,42 @@
     text-align:center;color:var(--text-dim);font-size:.72rem;
     padding:0 1rem 2rem;max-width:900px;margin:0 auto;line-height:1.6;
   }
+
+  /* ---------- tooltip de objeto (al pasar el ratón) ---------- */
+  .tip{
+    position:fixed;z-index:80;pointer-events:none;width:310px;
+    background:linear-gradient(180deg,#1b2030,#12151e);
+    border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 18px 44px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.05);
+    padding:.7rem .75rem;
+  }
+  .tip .t-name{
+    display:flex;align-items:center;gap:.35rem;
+    font-family:'Baloo 2',sans-serif;font-weight:600;font-size:.95rem;line-height:1.15;
+    margin-bottom:.5rem;
+  }
+  .tip .t-top{display:flex;gap:.6rem;align-items:center;padding-bottom:.55rem;border-bottom:1px solid var(--border-soft);}
+  .tip .t-meta{flex:1;min-width:0;}
+  .tip .t-lvl{
+    font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-muted);
+    text-transform:uppercase;letter-spacing:.06em;
+  }
+  .tip .t-sums{display:flex;flex-wrap:wrap;gap:.15rem .6rem;margin-top:.25rem;}
+  .tip .t-sum{
+    display:inline-flex;align-items:center;gap:.25rem;
+    font-family:'JetBrains Mono',monospace;font-size:.76rem;font-weight:700;color:#d6dbe9;
+  }
+  .tip .t-sum img{width:15px;height:15px;object-fit:contain;}
+  .tip .t-rows{margin-top:.5rem;display:flex;flex-direction:column;gap:.05rem;}
+  .tip .t-row{display:flex;align-items:center;gap:.45rem;font-size:.8rem;}
+  .tip .t-row img{width:17px;height:17px;object-fit:contain;flex:none;}
+  .tip .t-row .tv{
+    font-family:'JetBrains Mono',monospace;font-weight:700;width:58px;text-align:right;flex:none;
+  }
+  .tip .t-row .tv.pos{color:var(--ok);}
+  .tip .t-row .tv.neg{color:var(--danger);}
+  .tip .t-row .tn{color:#c3c9db;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tip .t-more{font-size:.72rem;color:var(--text-dim);margin-top:.3rem;}
 </style>
 </head>
 <body>
@@ -850,6 +886,7 @@ function renderGear(){
       <div class="frame"${frameStyle}>${inner}</div>
       <span class="lbl">${s.corto}</span>`;
     el.onclick = () => selectSlot(s.key);
+    if (first) attachTip(el, first);
     grid.appendChild(el);
   });
   document.getElementById('gear-count').textContent = totalCandidates() + ' candidatos';
@@ -927,6 +964,7 @@ function renderCandidates(){
     rm.title = 'Quitar';
     rm.onclick = () => { cands.splice(i,1); renderGear(); renderCandidates(); doSearch(); };
     row.appendChild(rm);
+    attachTip(row, it);
     list.appendChild(row);
   });
 }
@@ -935,6 +973,92 @@ function tagFor(it){
   return it.es_reliquia ? '<span class="tag reliquia">Reliquia</span>'
        : it.es_epico ? '<span class="tag epico">Épico</span>' : '';
 }
+
+/* =========================================================================
+   TOOLTIP DE OBJETO (al pasar el ratón)
+   Igual que el de Stratfu: cabecera con el icono, el nivel, el dominio acumulado
+   y la resistencia acumulada, y debajo la lista completa de stats.
+
+   NOTA sobre el "poids" de Stratfu: no se incluye. Es un valor propio suyo (no
+   existe en el juego) y no conocemos su fórmula; inventarse un cálculo daría un
+   número que parece oficial y no lo es.
+
+   "Dominio acumulado" = dominio elemental total (ya plegado con sus
+   multiplicadores) + los dominios secundarios (melé, distancia, berserker,
+   espalda, crítico, cura, zona, monoobjetivo).
+   "Resistencia acumulada" = resistencia elemental total + las secundarias
+   (crítica, espalda). Se usa la MISMA foldElementalStats() del motor. */
+const tipEl = document.createElement('div');
+tipEl.className = 'tip';
+tipEl.hidden = true;
+document.body.appendChild(tipEl);
+
+function attachTip(el, it){ el.dataset.tip = '1'; el.__item = it; return el; }
+
+function tipHtml(it){
+  const { stats } = foldElementalStats(it.stats);
+  let dom = 0, res = 0;
+  Object.entries(stats).forEach(([k, v]) => {
+    const n = k.toLowerCase();
+    if (n.startsWith('dominio')) dom += v;
+    else if (n.startsWith('resistencia')) res += v;
+  });
+  const rows = Object.entries(stats)
+    .filter(([,v]) => v !== 0)
+    .sort((a,b) => {
+      const pri = k => /^(pdv|punto de vida|vida|vitalidad)$/i.test(k) ? 0 : 1;
+      return (pri(a[0]) - pri(b[0])) || (Math.abs(b[1]) - Math.abs(a[1]));
+    });
+  const shown = rows.slice(0, 12);
+  const rounded = v => Math.round(v*100)/100;
+  return `
+    <div class="t-name" style="color:${rarityColor(it.rareza)}">${rarityGem(it.rareza)}<span>${it.nombre}</span>${tagFor(it)}</div>
+    <div class="t-top">
+      ${itemIconHtml(it)}
+      <div class="t-meta">
+        <div class="t-lvl">Niv. ${it.nivel} · ${it.slot}</div>
+        <div class="t-sums">
+          <span class="t-sum" title="Dominio acumulado">${statIconSmall('Dominio elemental total')}${rounded(dom)}</span>
+          <span class="t-sum" title="Resistencia acumulada">${statIconSmall('Resistencia elemental total')}${rounded(res)}</span>
+        </div>
+      </div>
+    </div>
+    <div class="t-rows">
+      ${shown.map(([k,v]) => `<div class="t-row">
+        <span class="tv ${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${rounded(v)}</span>
+        ${statIconSmall(k) || '<span style="width:17px"></span>'}
+        <span class="tn">${k}</span>
+      </div>`).join('')}
+    </div>
+    ${rows.length > shown.length ? `<div class="t-more">y ${rows.length - shown.length} más…</div>` : ''}`;
+}
+
+function placeTip(e){
+  const pad = 14, w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  if (x + w > innerWidth - 8) x = e.clientX - w - pad;
+  if (y + h > innerHeight - 8) y = Math.max(8, innerHeight - h - 8);
+  tipEl.style.left = x + 'px';
+  tipEl.style.top = y + 'px';
+}
+function hideTip(){ tipEl.hidden = true; }
+
+document.addEventListener('mouseover', e => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (!t || !t.__item){ hideTip(); return; }
+  if (tipEl.__for !== t.__item){
+    tipEl.__for = t.__item;
+    tipEl.innerHTML = tipHtml(t.__item);
+  }
+  tipEl.hidden = false;
+  placeTip(e);
+});
+document.addEventListener('mousemove', e => { if (!tipEl.hidden) placeTip(e); });
+document.addEventListener('mouseout', e => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (t && !t.contains(e.relatedTarget)) hideTip();
+});
+document.addEventListener('scroll', hideTip, true);
 
 /* =========================================================================
    BUSCADOR
@@ -994,6 +1118,7 @@ function doSearch(){
     if (!target) addBtn.style.opacity = '.35';
     addBtn.onclick = () => addCandidate(it, target);
     card.appendChild(addBtn);
+    attachTip(card, it);
     resultsList.appendChild(card);
   });
 }
@@ -1211,6 +1336,14 @@ function comboPiecesHtml(r){
   }).join('');
 }
 
+/* comboPiecesHtml() devuelve HTML plano, así que el tooltip se engancha después:
+   los .piece salen en el mismo orden que r.items. */
+function wirePieces(root, r){
+  root.querySelectorAll('.piece').forEach((el, i) => {
+    if (r.items[i]) attachTip(el, r.items[i]);
+  });
+}
+
 function renderResults(){
   if (lastResults.length === 0){
     resultsPanel.innerHTML = '<div class="panel"><div class="panel-body"><div class="empty-state">No hay combinaciones (o todas violan la regla de 1 reliquia / 1 épico).</div></div></div>';
@@ -1264,6 +1397,7 @@ function renderResults(){
     card.querySelector('.compare-toggle').onclick = (e) => e.stopPropagation();
     checkbox.onclick = (e) => { e.stopPropagation(); toggleCompare(r); };
     card.onclick = () => { sheetSource = r; renderResults(); renderSheet(); };
+    wirePieces(card, r);
     body.appendChild(card);
   });
   panel.appendChild(body);
@@ -1328,6 +1462,8 @@ function renderComparePanel(){
       </div>
     </div>`;
   panel.querySelector('#swap-ab').onclick = () => { compareSelection.reverse(); renderResults(); };
+  wirePieces(panel.querySelector('.cmp-col.a'), a);
+  wirePieces(panel.querySelector('.cmp-col.b'), b);
   return panel;
 }
 </script>
