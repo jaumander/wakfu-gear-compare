@@ -158,6 +158,44 @@ objeto en la izquierda".
   mano → 3 combinaciones crudas en vez de 4, todas válidas); dataset real regenerado por
   el usuario y verificado: **509 armas de 2 manos** de 7730 objetos.
 
+## EN CURSO: Filtros rápidos en el buscador
+
+**Motivación:** el usuario quiere filtrar más rápido sin desplegables: un slider de nivel
+de 2 puntos (en vez del dropdown de franjas), iconos de rareza que se pueden apagar/encender
+para ocultar rarezas, e iconos de tipo de equipo (a modo de espejo de la selección del grid
+de Equipo) justo encima del buscador.
+
+**Alcance — qué toca:**
+- Solo `index.html` (HTML + CSS + JS del buscador). No toca `build_dataset.py`, `compare.py`
+  ni el motor de combinaciones (`compare()`/cartesian) — los filtros solo afectan a qué
+  aparece en la lista de resultados de búsqueda, no a las combinaciones ya calculadas.
+- Sustituye el `<select id="level-filter">` por un slider de 2 puntos (min/max) sobre las
+  mismas franjas ya definidas en `levelRanges()`.
+- Añade una fila de iconos de rareza (0-7, usando `RARITY_COLOR`/`rarityGem`) que actúan
+  como "ocultar esta rareza" al pulsarlos (toggle on/off, todas activas por defecto).
+- Añade una fila de iconos de tipo de equipo (los 12 `GEAR_SLOTS`) que hacen de atajo para
+  `selectSlot()` — mismo comportamiento que pulsar un slot en el grid de Equipo de arriba,
+  para no duplicar lógica.
+
+**Qué NO toca:**
+- No cambia `doSearch()` en su lógica de tokens/nombre, solo añade condiciones de filtro
+  adicionales (rango de nivel del slider, rarezas no ocultas).
+- No cambia el motor de combinaciones ni el modal de comparación.
+- No es responsive para móvil en esta pasada (se revisa después si hace falta).
+
+**Milestones:**
+1/3 — Slider de nivel de 2 puntos sustituyendo el dropdown de franjas. Mismo rango de
+      valores exacto (1-245) que ya usa `levelRanges()`, sin franjas fijas: nivel exacto
+      arrastrable. Validado contra el filtrado que ya hacía el dropdown.
+2/3 — Iconos de rareza (0-7) para ocultar/mostrar por rareza.
+3/3 — Iconos de tipo de equipo como atajo de `selectSlot()`, con el icono activo resaltado
+      igual que en el grid de Equipo.
+
+**Última sesión (2026-08-02, transcript sin commitear):** hubo un intento previo de este
+mismo milestone 1/3 que nunca llegó a commitearse (la sesión se cortó a medias), así que
+no hay código suyo reutilizable en el repo — se reimplementa desde cero en base a este
+alcance.
+
 ## Pendiente / decisiones abiertas
 - **"Poids" de Stratfu**: métrica de valor global de un objeto. No se sabe cómo la calculan
   y el propio usuario duda de su utilidad. Aplazado.
