@@ -117,6 +117,19 @@ def build_slot_map(item_types):
     return slot_map
 
 
+def build_two_handed_set(item_types):
+    """itemTypeId de armas que ocupan las 2 manos (Hacha, Pala, Martillo, Arco,
+    Espada/Baston de 2 manos...). Confirmado con datos reales: cuando una arma de
+    FIRST_WEAPON trae "SECOND_WEAPON" en equipmentDisabledPositions, el juego no
+    deja poner nada en la mano izquierda a la vez (ver diagnose_weapons2.py)."""
+    two_handed = set()
+    for entry in item_types:
+        d = entry["definition"]
+        if "SECOND_WEAPON" in d.get("equipmentDisabledPositions", []):
+            two_handed.add(d["id"])
+    return two_handed
+
+
 def clean_stat_label(raw_label):
     """Limpia los placeholders de las descripciones oficiales de Ankama.
 
@@ -146,7 +159,7 @@ def build_action_map(actions):
     return action_map
 
 
-def build_reduced_items(items, slot_map, action_map):
+def build_reduced_items(items, slot_map, action_map, two_handed_ids):
     reduced = []
     for entry in items:
         item_def = entry["definition"]["item"]
@@ -220,6 +233,7 @@ def build_reduced_items(items, slot_map, action_map):
             "set_id": base.get("itemSetId"),
             "es_reliquia": is_relic,
             "es_epico": is_epic,
+            "es_dos_manos": type_id in two_handed_ids,
             "stats": stats,
         })
     return reduced
@@ -235,10 +249,11 @@ def main():
 
     print("Construyendo mapeos de slot y de stats...")
     slot_map = build_slot_map(raw["itemTypes"])
+    two_handed_ids = build_two_handed_set(raw["itemTypes"])
     action_map = build_action_map(raw["actions"])
 
     print("Generando dataset reducido...")
-    reduced = build_reduced_items(raw["items"], slot_map, action_map)
+    reduced = build_reduced_items(raw["items"], slot_map, action_map, two_handed_ids)
 
     con_gfx = sum(1 for it in reduced if it.get("gfx"))
     print(f"  objetos con gfx (icono): {con_gfx} / {len(reduced)}")

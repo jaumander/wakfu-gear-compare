@@ -757,6 +757,16 @@ const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u03
    pechera 136, capa 132, hombreras 138, cinturon 133, botas 119, anillo 103,
    emblema 646). Las dos manos no tienen un tipo unico (hay 11 tipos de arma), asi
    que usan una espada generica y el escudo generico de wakassets. */
+/* Objeto "hueco": representa la mano izquierda libre cuando la derecha lleva un
+   arma de 2 manos. stats vacío = no suma nada; es_hueco lo distingue de un
+   objeto real para no contarlo como pieza ni en el rango de nivel. */
+const MANO_LIBRE = {
+  id: null, nombre: 'Mano libre (arma a 2 manos)', slot: 'Mano Izquierda (arma/escudo)',
+  nivel: null, rareza: null, set_id: null,
+  es_reliquia: false, es_epico: false, es_dos_manos: false,
+  stats: {}, es_hueco: true,
+};
+
 const GEAR_SLOTS = [
   { key:'Casco',        tipo:'Casco',                         corto:'Casco',      ico:'itemTypes/134' },
   { key:'Amuleto',      tipo:'Amuleto',                       corto:'Amuleto',    ico:'itemTypes/120' },
@@ -1720,8 +1730,9 @@ function renderSheet(){
   }
   document.getElementById('sheet-title').textContent = r.titulo || 'Combinación';
   document.getElementById('sheet-sub').textContent = r.subtitulo || '';
-  document.getElementById('pill-pieces').textContent = r.items.length + (r.items.length === 1 ? ' pieza' : ' piezas');
-  const lvls = r.items.map(i => i.nivel);
+  const piezasReales = r.items.filter(i => !i.es_hueco);
+  document.getElementById('pill-pieces').textContent = piezasReales.length + (piezasReales.length === 1 ? ' pieza' : ' piezas');
+  const lvls = piezasReales.map(i => i.nivel);
   document.getElementById('pill-lvl').textContent = 'nvl ' + Math.min(...lvls) + '–' + Math.max(...lvls);
 
   const groups = groupedStats(r.stats);
@@ -1783,17 +1794,42 @@ document.getElementById('compare-btn').onclick = () => {
     renderSheet();
     return;
   }
-  const optionLists = activeKeys.map(k => candidatesBySlot[k]);
-  const combos = cartesian(optionLists).filter(isValidCombo);
+  // Mano derecha + Mano izq. se tratan como una pareja (no como 2 slots libres):
+  // si el candidato de la derecha es de 2 manos, la izquierda queda "libre" (1 sola
+  // combinación, no una por cada candidato de esa mano) para poder comparar en la
+  // misma tabla "arma de 2 manos" vs "1 mano + objeto en la izquierda".
+  const derActiva = activeKeys.includes('Mano derecha');
+  const izqActiva = activeKeys.includes('Mano izq.');
+  let labels, optionLists;
+  if (derActiva && izqActiva) {
+    const pares = [];
+    candidatesBySlot['Mano derecha'].forEach(der => {
+      if (der.es_dos_manos) {
+        pares.push([der, MANO_LIBRE]);
+      } else {
+        candidatesBySlot['Mano izq.'].forEach(izq => pares.push([der, izq]));
+      }
+    });
+    const restoKeys = activeKeys.filter(k => k !== 'Mano derecha' && k !== 'Mano izq.');
+    labels = ['Mano derecha', 'Mano izq.', ...restoKeys];
+    optionLists = [pares, ...restoKeys.map(k => candidatesBySlot[k])];
+  } else {
+    labels = activeKeys;
+    optionLists = activeKeys.map(k => candidatesBySlot[k]);
+  }
+  const crudos = (derActiva && izqActiva)
+    ? cartesian(optionLists).map(c => [c[0][0], c[0][1], ...c.slice(1)])
+    : cartesian(optionLists);
+  const combos = crudos.filter(isValidCombo);
   lastResults = combos.map(combo => {
     const { stats, breakdown } = foldElementalStats(sumStats(combo));
-    return { labels: activeKeys, items: combo, stats, breakdown,
-             domItems: dominioPorItem(combo, activeKeys) };
+    return { labels, items: combo, stats, breakdown,
+             domItems: dominioPorItem(combo, labels) };
   });
   compareSelection = [];
   sheetSource = null;
-  hintEl.textContent = combos.length + ' válidas de ' + totalBruto
-    + (totalBruto - combos.length > 0 ? ' (' + (totalBruto - combos.length) + ' descartadas por reliquia/épico)' : '');
+  hintEl.textContent = combos.length + ' válidas de ' + crudos.length
+    + (crudos.length - combos.length > 0 ? ' (' + (crudos.length - combos.length) + ' descartadas por reliquia/épico)' : '');
   renderResults();
 };
 sortSelect.onchange = renderResults;
