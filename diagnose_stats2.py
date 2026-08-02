@@ -39,8 +39,9 @@ for entry in actions:
     raw_label = desc.get("es") or desc.get("en") or entry["definition"].get("effect", "")
     action_map_raw[action_id] = raw_label
 
-print("=== Descripcion cruda de actionId 120 (referenciado por la Varita de mago gris) ===")
-print(f"  {action_map_raw.get(120, '<no existe>')!r}")
+print("=== Descripcion cruda de actionId 120 y 121 (los dos valores vistos en params[4]) ===")
+print(f"  120 -> {action_map_raw.get(120, '<no existe>')!r}")
+print(f"  121 -> {action_map_raw.get(121, '<no existe>')!r}")
 print()
 
 print("=== Todos los items que usan actionId 39 o 40, con sus params completos ===")
