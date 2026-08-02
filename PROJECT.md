@@ -18,7 +18,7 @@ equipo, descartando automáticamente las que violan la regla de "máx. 1 reliqui
   reliquia en cada slot) que reproduce el caso real del usuario: de 4 combinaciones
   posibles, detecta y descarta correctamente la única inválida (2 reliquias a la vez).
 
-## EN CURSO: Página web de comparación (sustituye el flujo de terminal)
+## HECHO: Página web de comparación (sustituye el flujo de terminal)
 
 **Motivación:** el usuario quiere usarlo junto a Zenith/Wakforge en el navegador. Stratfu ya
 hace algo parecido pero solo compara 2 objetos a la vez y está en francés; esta herramienta
@@ -48,9 +48,11 @@ y en español.
 1/2 — Página funcional: búsqueda, cubos de candidatos, cálculo de combinaciones válidas,
       tabla de resultados ordenable. Validado comparando su resultado con `compare.py`
       sobre los mismos IDs.
-2/2 — Pulido de uso real: quitar/editar candidatos ya añadidos, guardar la última búsqueda
-      en el propio navegador, instrucciones de uso en el README (incluye cómo publicarlo
-      con GitHub Pages para el móvil).
+2/2 — Pulido de uso real: quitar/editar candidatos ya añadidos (HECHO), guardar la última
+      búsqueda en el navegador (el usuario dijo que NO le interesa: quiere la herramienta
+      como acompañante de un builder, no como builder), instrucciones en el README de cómo
+      publicarlo con GitHub Pages (ya está publicado en
+      https://jaumander.github.io/wakfu-gear-compare/ , falta documentarlo).
 
 ## Hecho (sesión 2026-08-02)
 - `items_reduced.json` ya tiene el dataset REAL del juego (versión 1.92.1.59, 7730 objetos
@@ -74,12 +76,32 @@ y en español.
   (commit 7daff4d). Verificado: 5716 stats "(N elementos)" y 3059 "(todos)" presentes en
   el dataset publicado — la web ya muestra los nombres correctos sin pasos adicionales.
 
+## Hecho (sesión 2026-08-02, rediseño visual con Claude Design)
+Rediseño **puramente visual** de `index.html`; la lógica de negocio no se tocó. Resumen —
+el detalle completo, con los datos verificados y las decisiones tomadas, está en HANDOFF.md.
+- Interfaz tipo "ficha de personaje" inspirada en Zenith/Wakfuli/Stratfu: columna de stats
+  a la izquierda en bloques plegables, ficha de los 12 slots a la derecha (cada slot admite
+  N candidatos), y comparador A/B a dos columnas con la diferencia en el centro.
+- Iconos reales del juego (stats, rareza, tipo de slot y objeto). **Confirmado** que el
+  identificador del icono es `definition.item.graphicParameters.gfxId` (no coincide con el
+  `id`); `build_dataset.py` ya lo guarda como `gfx` y el dataset publicado lo trae en
+  7730/7730 objetos.
+- **La URL oficial de iconos de Ankama ya no funciona** (probada con 5 gfxId reales, fallan
+  los 5). Se usa el repo comunitario `Vertylo/wakassets`, declarado en el código y en el
+  README por transparencia.
+- Las stats se agrupan y ordenan como en el propio juego, con dos modos (Personaje /
+  Aptitudes), y el mismo orden se aplica a la ficha, a las tarjetas y al comparador.
+- Tope de 250 combinaciones: por encima el navegador se cuelga (comprobado). La herramienta
+  es para duelos cortos, no para optimizar un build entero.
+- GitHub Pages activado: https://jaumander.github.io/wakfu-gear-compare/
+
 ## Pendiente / decisiones abiertas
-- **Rediseño visual con Claude Design (en cola, sin empezar)**: el usuario va a dar acceso
-  al repo a Claude Design para rehacer el diseño de `index.html` inspirándose en Wakfuli,
-  Zenith y Stratfu. Ya se investigó de dónde sacar los iconos de objetos/estadísticas/
-  rareza que usan esas webs (fuente oficial de Ankama + repo comunitario de respaldo) —
-  ver el checklist completo en HANDOFF.md antes de tocar el diseño.
+- **Selector de "elementos que usa mi build" (2/3/4)**: un objeto que da dominio a los 4
+  elementos infla un total que la mayoría de builds no aprovecha (casi todas las clases
+  juegan 2-3 elementos). Propuesto al usuario recalcular el total contando solo los
+  elementos elegidos, como el "Nb éléments" de Stratfu. Pendiente de que lo pida.
+- **"Poids" de Stratfu**: métrica de valor global de un objeto. No se sabe cómo la calculan
+  y el propio usuario duda de su utilidad. Aplazado.
 - Confirmar la tabla completa de valores de `rareza` (se han visto 1-4 en items de nivel
   bajo; falta mapear qué número corresponde a legendario/mítico/recuerdo, para poder
   filtrar por rareza además de por reliquia/épico).
