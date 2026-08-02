@@ -156,6 +156,7 @@
     <div class="search-row">
       <input type="text" id="search-input" placeholder="Nombre del objeto (ej. amuleto del dragón)">
       <select id="slot-filter"><option value="">Todos los slots</option></select>
+      <select id="level-filter"><option value="">Todos los niveles</option></select>
     </div>
     <div class="results-list" id="results-list"></div>
   </div>
@@ -190,6 +191,7 @@ let lastResults = [];
 const statusEl = document.getElementById('status');
 const searchInput = document.getElementById('search-input');
 const slotFilter = document.getElementById('slot-filter');
+const levelFilter = document.getElementById('level-filter');
 const resultsList = document.getElementById('results-list');
 const slotsEl = document.getElementById('slots');
 const sortSelect = document.getElementById('sort-select');
@@ -205,6 +207,7 @@ fetch(RAW_URL)
     statusEl.textContent = items.length + ' objetos cargados desde GitHub.';
     statusEl.className = 'status ok';
     setupSlotFilter();
+    setupLevelFilter();
     setupSortOptions();
     slotLabels = ['Slot 1', 'Slot 2'];
     slotLabels.forEach(s => candidatesBySlot[s] = []);
@@ -224,6 +227,24 @@ function setupSlotFilter(){
   });
 }
 
+function levelRanges(){
+  // 1-20, y luego cada 15 niveles hasta 245
+  const ranges = [[1, 20]];
+  for (let start = 21; start <= 245; start += 15){
+    ranges.push([start, start + 14]);
+  }
+  return ranges;
+}
+
+function setupLevelFilter(){
+  levelRanges().forEach(([lo, hi]) => {
+    const opt = document.createElement('option');
+    opt.value = lo + '-' + hi;
+    opt.textContent = 'Nivel ' + lo + '-' + hi;
+    levelFilter.appendChild(opt);
+  });
+}
+
 function setupSortOptions(){
   const stats = new Set();
   items.forEach(it => Object.keys(it.stats).forEach(k => stats.add(k)));
@@ -237,10 +258,17 @@ function setupSortOptions(){
 function doSearch(){
   const q = searchInput.value.trim().toLowerCase();
   const slot = slotFilter.value;
+  const levelRange = levelFilter.value;
   resultsList.innerHTML = '';
   if (!q){ return; }
+  let lo = null, hi = null;
+  if (levelRange){
+    [lo, hi] = levelRange.split('-').map(Number);
+  }
   const matches = items.filter(it =>
-    it.nombre.toLowerCase().includes(q) && (!slot || it.slot === slot)
+    it.nombre.toLowerCase().includes(q)
+    && (!slot || it.slot === slot)
+    && (lo === null || (it.nivel >= lo && it.nivel <= hi))
   ).slice(0, 60);
   if (matches.length === 0){
     resultsList.innerHTML = '<div class="empty-hint">Sin resultados.</div>';
@@ -256,33 +284,42 @@ function doSearch(){
       <span class="nivel">nvl ${it.nivel}</span>
       <span class="nivel">${it.slot}</span>
     `;
-    const addBtn = document.createElement('button');
-    addBtn.className = 'add';
-    addBtn.textContent = '+ Añadir';
-    addBtn.onclick = () => openAddMenu(it);
-    row.appendChild(addBtn);
+    // Desplegable con los cubos existentes, para elegir claramente a cuál
+    // añadir el candidato. Si solo hay un cubo se añade directo, sin desplegable.
+    if (slotLabels.length > 1){
+      const bucketSelect = document.createElement('select');
+      bucketSelect.className = 'bucket-select';
+      slotLabels.forEach(label => {
+        const opt = document.createElement('option');
+        opt.value = label;
+        opt.textContent = label;
+        bucketSelect.appendChild(opt);
+      });
+      row.appendChild(bucketSelect);
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add';
+      addBtn.textContent = '+ Añadir';
+      addBtn.onclick = () => {
+        candidatesBySlot[bucketSelect.value].push(it);
+        renderSlots();
+      };
+      row.appendChild(addBtn);
+    } else {
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add';
+      addBtn.textContent = '+ Añadir';
+      addBtn.onclick = () => {
+        candidatesBySlot[slotLabels[0]].push(it);
+        renderSlots();
+      };
+      row.appendChild(addBtn);
+    }
     resultsList.appendChild(row);
   });
 }
 searchInput.addEventListener('input', doSearch);
 slotFilter.addEventListener('change', doSearch);
-
-function openAddMenu(item){
-  if (slotLabels.length === 1){
-    candidatesBySlot[slotLabels[0]].push(item);
-    renderSlots();
-    return;
-  }
-  const choice = prompt(
-    'Añadir "' + item.nombre + '" a qué cubo?\n' + slotLabels.map((s,i)=>(i+1)+': '+s).join('\n'),
-    '1'
-  );
-  const idx = parseInt(choice, 10) - 1;
-  if (idx >= 0 && idx < slotLabels.length){
-    candidatesBySlot[slotLabels[idx]].push(item);
-    renderSlots();
-  }
-}
+levelFilter.addEventListener('change', doSearch);
 
 function renderSlots(){
   slotsEl.innerHTML = '';
