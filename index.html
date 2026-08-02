@@ -311,6 +311,44 @@
 
   /* ---------- buscador ---------- */
   .search-row{display:flex;gap:.5rem;flex-wrap:wrap;}
+
+  /* ---------- slider de nivel (2 puntos) ---------- */
+  .lvl-filter{
+    display:flex;align-items:center;gap:.65rem;margin-top:.5rem;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:.5rem .8rem;
+  }
+  .lvl-filter .lvl-lbl{
+    font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted);
+    text-transform:uppercase;letter-spacing:.06em;flex:none;
+  }
+  .lvl-filter .lvl-val{
+    font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:700;
+    color:var(--text);flex:none;white-space:nowrap;min-width:74px;text-align:right;
+  }
+  .lvl-track{position:relative;flex:1;height:20px;min-width:120px;}
+  .lvl-track .rail{
+    position:absolute;top:50%;left:0;right:0;height:3px;transform:translateY(-50%);
+    background:var(--border);border-radius:2px;
+  }
+  .lvl-track .fill{
+    position:absolute;top:50%;height:3px;transform:translateY(-50%);
+    background:var(--ok, #35c79a);border-radius:2px;
+  }
+  .lvl-track input[type=range]{
+    position:absolute;top:0;left:0;width:100%;height:20px;margin:0;
+    -webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;
+  }
+  .lvl-track input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;pointer-events:auto;width:14px;height:14px;border-radius:50%;
+    background:var(--ok, #35c79a);border:2px solid #0d1017;cursor:pointer;
+  }
+  .lvl-track input[type=range]::-moz-range-thumb{
+    pointer-events:auto;width:14px;height:14px;border-radius:50%;
+    background:var(--ok, #35c79a);border:2px solid #0d1017;cursor:pointer;
+  }
+  .lvl-track input[type=range]::-webkit-slider-runnable-track{background:transparent;}
+  .lvl-track input[type=range]::-moz-range-track{background:transparent;border:none;}
   input[type=text], select{
     background:var(--surface-2);
     border:1px solid var(--border);
@@ -684,7 +722,16 @@
         <div class="search-row">
           <input type="text" id="search-input" placeholder="Nombre del objeto (ej. amuleto del dragón)">
           <select id="slot-filter"><option value="">Todos los slots</option></select>
-          <select id="level-filter"><option value="">Todos los niveles</option></select>
+        </div>
+        <div class="lvl-filter">
+          <span class="lvl-lbl">Niv.</span>
+          <div class="lvl-track" id="lvl-track">
+            <div class="rail"></div>
+            <div class="fill" id="lvl-fill"></div>
+            <input type="range" id="level-min" min="1" max="245" value="1" step="1">
+            <input type="range" id="level-max" min="1" max="245" value="245" step="1">
+          </div>
+          <span class="lvl-val" id="lvl-val">1 - 245</span>
         </div>
         <div class="find-msg" id="results-list"></div>
       </div>
@@ -1042,7 +1089,11 @@ function flatOrderedStats(stats){
 const statusEl = document.getElementById('status');
 const searchInput = document.getElementById('search-input');
 const slotFilter = document.getElementById('slot-filter');
-const levelFilter = document.getElementById('level-filter');
+const levelMinInput = document.getElementById('level-min');
+const levelMaxInput = document.getElementById('level-max');
+const levelValLabel = document.getElementById('lvl-val');
+const levelFill = document.getElementById('lvl-fill');
+const LVL_MIN = 1, LVL_MAX = 245;
 const resultsList = document.getElementById('results-list');
 const sortSelect = document.getElementById('sort-select');
 const resultsPanel = document.getElementById('results-panel');
@@ -1078,22 +1129,35 @@ function setupSlotFilter(){
   });
 }
 
-function levelRanges(){
-  // 1-20, y luego cada 15 niveles hasta 245
-  const ranges = [[1, 20]];
-  for (let start = 21; start <= 245; start += 15){
-    ranges.push([start, start + 14]);
-  }
-  return ranges;
+/* Slider de nivel de 2 puntos: nivel exacto arrastrable (no franjas fijas).
+   Los 2 <input type=range> se superponen (técnica estándar para "dual range")
+   y solo el pulgar (::-webkit/-moz-slider-thumb) tiene pointer-events, para que
+   el usuario pueda coger cualquiera de los dos aunque estén juntos. */
+function updateLevelSliderUI(){
+  const pct = v => (v - LVL_MIN) / (LVL_MAX - LVL_MIN) * 100;
+  const lo = parseInt(levelMinInput.value, 10);
+  const hi = parseInt(levelMaxInput.value, 10);
+  levelFill.style.left = pct(lo) + '%';
+  levelFill.style.right = (100 - pct(hi)) + '%';
+  levelValLabel.textContent = lo + ' - ' + hi;
 }
 
 function setupLevelFilter(){
-  levelRanges().forEach(([lo, hi]) => {
-    const opt = document.createElement('option');
-    opt.value = lo + '-' + hi;
-    opt.textContent = 'Nivel ' + lo + '-' + hi;
-    levelFilter.appendChild(opt);
+  levelMinInput.addEventListener('input', () => {
+    if (parseInt(levelMinInput.value, 10) > parseInt(levelMaxInput.value, 10)){
+      levelMinInput.value = levelMaxInput.value;
+    }
+    updateLevelSliderUI();
+    doSearch();
   });
+  levelMaxInput.addEventListener('input', () => {
+    if (parseInt(levelMaxInput.value, 10) < parseInt(levelMinInput.value, 10)){
+      levelMaxInput.value = levelMinInput.value;
+    }
+    updateLevelSliderUI();
+    doSearch();
+  });
+  updateLevelSliderUI();
 }
 
 function setupSortOptions(){
@@ -1410,7 +1474,9 @@ function topStatsOf(it, n){
 function doSearch(){
   const q = searchInput.value.trim();
   const slot = slotFilter.value;
-  const levelRange = levelFilter.value;
+  const lo = parseInt(levelMinInput.value, 10);
+  const hi = parseInt(levelMaxInput.value, 10);
+  const levelActive = !(lo === LVL_MIN && hi === LVL_MAX);
   const countEl = document.getElementById('find-count');
   resultsList.innerHTML = '';
   if (!q){
@@ -1419,17 +1485,13 @@ function doSearch(){
     resultsList.innerHTML = '<div class="hint">Escribe el nombre de un objeto para buscarlo.</div>';
     return;
   }
-  let lo = null, hi = null;
-  if (levelRange){
-    [lo, hi] = levelRange.split('-').map(Number);
-  }
   // Busqueda por palabras sueltas y sin acentos: "amuleto dragon" encuentra
   // "Amuleto del dragon", y "critico" encuentra "critico".
   const tokens = norm(q).split(/\s+/).filter(Boolean);
   const all = items.filter(it =>
     tokens.every(t => it._n.includes(t))
     && (!slot || it.slot === slot)
-    && (lo === null || (it.nivel >= lo && it.nivel <= hi))
+    && (!levelActive || (it.nivel >= lo && it.nivel <= hi))
   );
   const matches = all.slice(0, 60);
   countEl.textContent = all.length + (all.length > 60 ? ' (muestra 60)' : '');
@@ -1509,7 +1571,6 @@ document.getElementById('find-view').onclick = (e) => {
 };
 searchInput.addEventListener('input', doSearch);
 slotFilter.addEventListener('change', doSearch);
-levelFilter.addEventListener('change', doSearch);
 
 /* =========================================================================
    MOTOR (sin cambios respecto a la versión anterior)
