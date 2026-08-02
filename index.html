@@ -998,10 +998,17 @@ document.body.appendChild(tipEl);
 function attachTip(el, it){ el.dataset.tip = '1'; el.__item = it; return el; }
 
 /* Icono del TIPO de objeto (casco, amuleto, botas...). wakassets lo sirve en
-   itemTypes/{itemTypeId}.png; build_dataset.py guarda ese id como `tipo_id`.
-   Si el dataset aún no lo trae, simplemente no se pinta. */
+   itemTypes/{itemTypeId}.png; build_dataset.py ya guarda ese id como `tipo_id`.
+
+   No hace falta esperar a regenerar el dataset: el `gfx` lo lleva dentro.
+   Verificado sobre los 7730 objetos del dataset publicado que el gfx es SIEMPRE
+   "3 digitos de itemTypeId" + el id del grafico (1205368 -> tipo 120 = amuleto;
+   2233950 -> tipo 223). Ojo: ese id del grafico NO es el id del objeto, porque
+   los objetos reskineados reusan el grafico de otro (4669 de 7730 casos) — por
+   eso se lee el prefijo, no se resta el id. */
 function typeIconHtml(it){
-  const t = it.tipo_id ?? it.tipoId ?? null;
+  let t = it.tipo_id ?? it.tipoId ?? null;
+  if (!t && it.gfx) t = String(it.gfx).slice(0, 3);
   return t ? `<img src="${ASSETS}/itemTypes/${t}.png" alt="" onerror="this.remove()">` : '';
 }
 
