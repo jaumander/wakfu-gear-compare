@@ -26,21 +26,21 @@
   - `index.html` calcula además un stat extra "Resistencia/Dominio elemental total"
     sumando específicas ×1 + "todos" ×4 + "N elementos" ×N — validado dando 234 vs 220
     en el caso de prueba real del usuario (ver PROJECT.md para el detalle).
+  - **RESUELTO**: el usuario ya subió el `items_reduced.json` regenerado (commit
+    7daff4d "Add files via upload"). Verificado: 7730 objetos, con 5716 stats de tipo
+    "Dominio/Resistencia elemental (N elementos)" y 3059 de tipo "(todos)" ya presentes
+    (antes salían todos como "Stat desconocida"). La web ya muestra los nombres
+    correctos y el total elemental combinado sin pasos adicionales.
 - Qué falta:
-  - **Bloqueante para que el arreglo de dominio/resistencia se vea en la web**: el
-    `items_reduced.json` publicado en el repo es el ANTIGUO (con "Stat desconocida"
-    todavía). El usuario tiene que volver a correr `python build_dataset.py` en su
-    máquina (usará la caché de `data/`, será rápido) y pasar el `items_reduced.json`
-    nuevo para subirlo. Sin este paso, la web sigue funcionando pero sin los nombres
-    corregidos.
   - Milestone 2/2 real: guardar la última búsqueda en el propio navegador, instrucciones
     en el README de cómo publicarlo con GitHub Pages. (Quitar/editar candidatos ya está
     resuelto: se puede quitar uno a uno con el botón "x" y el flujo de añadir ya no usa
     popups confusos).
-- Archivos tocados: `index.html`, `build_dataset.py`, `PROJECT.md`.
-- Último commit: 976e9a5 "WIP: documentar arreglo de dominio/resistencia elemental en PROJECT.md"
-- Duda pendiente de confirmar con el usuario: ninguna decisión de diseño abierta, solo
-  falta que el usuario suba el `items_reduced.json` regenerado (ver arriba).
+- Archivos tocados: `index.html`, `build_dataset.py`, `PROJECT.md`, `items_reduced.json`.
+- Último commit: 7daff4d "Add files via upload" (dataset regenerado subido por el usuario)
+- Duda pendiente de confirmar con el usuario: ninguna. Listo para seguir con el
+  milestone 2/2 (guardar última búsqueda + instrucciones de GitHub Pages) cuando el
+  usuario quiera continuar.
 
 <!--
 Plantilla para cuando quede trabajo a medias:

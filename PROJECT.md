@@ -70,12 +70,11 @@ y en español.
   "(todos)". La web (`index.html`) además calcula un "Resistencia/Dominio elemental total"
   combinando específicas (×1) + "todos" (×4) + "N elementos" (×N) — validado dando 234 vs
   220 en el caso de prueba real del usuario.
+- `items_reduced.json` regenerado y subido por el usuario con este arreglo ya aplicado
+  (commit 7daff4d). Verificado: 5716 stats "(N elementos)" y 3059 "(todos)" presentes en
+  el dataset publicado — la web ya muestra los nombres correctos sin pasos adicionales.
 
 ## Pendiente / decisiones abiertas
-- **Falta regenerar `items_reduced.json`**: el arreglo de arriba está en `build_dataset.py`
-  pero el dataset publicado en el repo es el antiguo. El usuario tiene que volver a correr
-  `python build_dataset.py` en su máquina (usará la caché de `data/`, así que será rápido)
-  y subir/pegar el `items_reduced.json` nuevo para que la web recoja los nombres corregidos.
 - Confirmar la tabla completa de valores de `rareza` (se han visto 1-4 en items de nivel
   bajo; falta mapear qué número corresponde a legendario/mítico/recuerdo, para poder
   filtrar por rareza además de por reliquia/épico).
