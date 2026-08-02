@@ -26,7 +26,27 @@
 - Pendiente de que el usuario diga el nombre exacto de un arma de dos manos que buscó y no
   le apareció, para rastrearla paso a paso en el JSON crudo en vez de seguir adivinando.
 
-## RESUELTO: stat "armadura dada"/"armadura recibida" ya no cae en "Stat desconocida"
+## RESUELTO: actionId 304 ("Stat desconocida" en objetos con pasiva única)
+- El barrido completo (`diagnose_stats3.py`) encontró un único actionId sin resolver
+  aparte de la armadura: el 304, con 570 apariciones. El usuario confirmó viendo los
+  objetos reales que son objetos con **pasivas únicas de texto libre** (habilidades
+  especiales, no un stat numérico normal) — el número de `params[0]` no es un valor
+  sumable como stat.
+- Arreglado en `build_dataset.py` (`UNIQUE_PASSIVE_ACTION_IDS`): en vez de intentar
+  mostrar el número crudo, estos objetos ahora salen con
+  `"Pasiva única (ver descripción del objeto)": 1` (solo marca que la tienen, no
+  pretende ser un valor comparable). Validado con un caso sintético.
+- `diagnose_stats3.py` ya excluye este actionId del barrido para no volver a marcarlo.
+
+## Siguiente paso antes de regenerar el dataset
+Con armadura (39/40) y pasiva única (304) resueltos, debería quedar **0** actionIds
+problemáticos. Antes de dar por bueno el regenerado, el usuario debe:
+1. `git pull`
+2. `python diagnose_stats3.py` — confirmar que sale "0 problematicos". Si sale algo
+   más, avisar antes de seguir (puede haber un actionId raro que no haya salido antes
+   por casualidad de qué objetos están cacheados).
+3. Si sale 0: `python build_dataset.py`, luego `git add items_reduced.json && git
+   commit && git push` para publicar el dataset real ya arreglado.
 - Causa: `actionId` 39 (y 40, su versión en negativo) usan una plantilla de texto en
   `actions.json` que no sirve ("[#1]{...%} [#3]"): el nombre real no está en el texto, va
   codificado en `params[4]` (120 = armadura dada, 121 = armadura recibida). **Importante:**
@@ -39,10 +59,8 @@
   `build_reduced_items`), validado con un dataset sintético que reproduce ambos casos
   reales más un caso de actionId 40 (debe salir en negativo). Los 3 casos de prueba dieron
   el resultado esperado. Commit ya pusheado.
-- **Pendiente de que el usuario haga**: `git pull`, luego `python build_dataset.py`
-  (regenera `items_reduced.json` con datos reales, ya con este arreglo aplicado) y
-  `git add items_reduced.json && git commit && git push`. Solo entonces la web mostrará
-  bien estos ~216 objetos que antes caían en "Stat desconocida".
+- **Pendiente de que el usuario haga**: ver sección "Siguiente paso antes de regenerar
+  el dataset" más arriba (ahora cubre armadura + pasiva única a la vez).
 - Nota menor: solo se han visto los valores 120/121 en `params[4]` en los datos reales
   actuales (216 apariciones). Si tras regenerar aparecen "accion_39"/"accion_40" sin
   resolver en algún objeto, es que hay un tercer valor de `params[4]` no visto todavía —
