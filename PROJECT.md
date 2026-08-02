@@ -18,6 +18,40 @@ equipo, descartando automáticamente las que violan la regla de "máx. 1 reliqui
   reliquia en cada slot) que reproduce el caso real del usuario: de 4 combinaciones
   posibles, detecta y descarta correctamente la única inválida (2 reliquias a la vez).
 
+## EN CURSO: Página web de comparación (sustituye el flujo de terminal)
+
+**Motivación:** el usuario quiere usarlo junto a Zenith/Wakforge en el navegador. Stratfu ya
+hace algo parecido pero solo compara 2 objetos a la vez y está en francés; esta herramienta
+compara N candidatos por slot (2, 4, o más) a la vez, respetando la regla de reliquia/épico,
+y en español.
+
+**Alcance — qué toca:**
+- Un único archivo `index.html` (HTML+CSS+JS, sin frameworks, sin paso de build) que:
+  - Descarga `items_reduced.json` directamente desde GitHub (raw.githubusercontent.com) al
+    abrirse, así siempre usa el dataset más reciente sin tener que tocar el archivo.
+  - Permite buscar objetos por nombre (y filtrar por slot).
+  - Permite añadir 2+ candidatos a "cubos" (el usuario los nombra, ej. "Amuleto",
+    "Anillo 1", "Anillo 2"...).
+  - Calcula todas las combinaciones válidas (máx. 1 reliquia, máx. 1 épico) y las muestra
+    ordenadas por la estadística que el usuario elija.
+  - Funciona abriendo el archivo directamente con doble clic (sin instalar nada); también
+    se puede publicar con GitHub Pages para usarlo desde el móvil con una URL.
+
+**Qué NO toca (para no romper nada existente):**
+- No modifica `build_dataset.py` ni `compare.py` (siguen funcionando igual para quien
+  prefiera la terminal).
+- No añade backend ni build step (Node, npm, etc.) — todo vive en un solo archivo HTML.
+- No implementa aún la optimización de las 12 piezas a la vez (eso sigue siendo v2,
+  sin tocar en esta feature).
+
+**Milestones:**
+1/2 — Página funcional: búsqueda, cubos de candidatos, cálculo de combinaciones válidas,
+      tabla de resultados ordenable. Validado comparando su resultado con `compare.py`
+      sobre los mismos IDs.
+2/2 — Pulido de uso real: quitar/editar candidatos ya añadidos, guardar la última búsqueda
+      en el propio navegador, instrucciones de uso en el README (incluye cómo publicarlo
+      con GitHub Pages para el móvil).
+
 ## Hecho (sesión 2026-08-02)
 - `items_reduced.json` ya tiene el dataset REAL del juego (versión 1.92.1.59, 7730 objetos
   equipables), generado por el usuario en su máquina con `build_dataset.py`. Ya no es el

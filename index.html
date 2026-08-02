@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wakfu Gear Compare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12141d;
+    --surface:#1b1e2a;
+    --surface-2:#232738;
+    --border:#2e3245;
+    --text:#e7e9f0;
+    --text-muted:#8b8fa3;
+    --reliquia:#d4af37;
+    --epico:#a67bdb;
+    --ok:#35c79a;
+    --danger:#e2596b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:2rem 1.25rem 4rem;}
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.6rem;
+    margin:0 0 .25rem;
+    letter-spacing:-.01em;
+  }
+  .subtitle{color:var(--text-muted);font-size:.9rem;margin:0 0 1.75rem;}
+  .status{font-size:.82rem;color:var(--text-muted);margin-bottom:1.5rem;}
+  .status.error{color:var(--danger);}
+  .status.ok{color:var(--ok);}
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:1.1rem 1.25rem;
+    margin-bottom:1.25rem;
+  }
+  .panel h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:1rem;
+    font-weight:500;
+    margin:0 0 .9rem;
+    color:var(--text);
+  }
+
+  .search-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.9rem;}
+  input[type=text], select{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    padding:.5rem .7rem;
+    font-size:.88rem;
+    font-family:inherit;
+  }
+  input[type=text]{flex:1;min-width:180px;}
+  select{min-width:150px;}
+  input[type=text]:focus, select:focus{outline:1px solid var(--ok);}
+
+  .results-list{max-height:230px;overflow-y:auto;border-top:1px solid var(--border);}
+  .result-row{
+    display:flex;align-items:center;gap:.6rem;
+    padding:.5rem .1rem;border-bottom:1px solid var(--border);
+    font-size:.85rem;
+  }
+  .result-row .nombre{flex:1;}
+  .result-row .nivel{color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:.78rem;width:52px;}
+  .tag{
+    font-size:.68rem;font-weight:600;padding:1px 6px;border-radius:4px;
+    text-transform:uppercase;letter-spacing:.03em;
+  }
+  .tag.reliquia{background:rgba(212,175,55,.15);color:var(--reliquia);}
+  .tag.epico{background:rgba(166,123,219,.15);color:var(--epico);}
+  button{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    padding:.4rem .8rem;
+    font-size:.82rem;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  button:hover{border-color:var(--ok);}
+  button.add{color:var(--ok);border-color:var(--ok);}
+  button.primary{
+    background:var(--ok);color:#0a1f18;font-weight:600;border:none;
+    padding:.6rem 1.1rem;font-size:.9rem;
+  }
+  button.primary:hover{opacity:.9;}
+  button.remove{color:var(--danger);border-color:var(--danger);padding:.25rem .5rem;font-size:.75rem;}
+
+  .slots{display:flex;flex-direction:column;gap:.9rem;}
+  .slot{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:.75rem .9rem;
+  }
+  .slot-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+  .slot-header input[type=text]{max-width:220px;font-weight:500;}
+  .candidate-list{display:flex;flex-direction:column;gap:.35rem;}
+  .candidate{
+    display:flex;align-items:center;gap:.5rem;
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;
+    padding:.4rem .6rem;font-size:.85rem;
+  }
+  .candidate .nombre{flex:1;}
+  .empty-hint{color:var(--text-muted);font-size:.8rem;padding:.3rem 0;}
+
+  .toolbar{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-top:.5rem;}
+  .toolbar select{min-width:180px;}
+
+  .combo-card{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:.9rem 1rem;
+    margin-bottom:.75rem;
+  }
+  .combo-card.best{border-color:var(--ok);}
+  .combo-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem;}
+  .combo-title .rank{font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:.78rem;}
+  .combo-items{font-size:.85rem;color:var(--text);margin-bottom:.6rem;}
+  .combo-items .slot-name{color:var(--text-muted);}
+  .stats-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+    gap:.4rem .8rem;
+  }
+  .stat{font-family:'JetBrains Mono',monospace;font-size:.8rem;display:flex;justify-content:space-between;}
+  .stat .v{font-weight:600;}
+  .empty-state{color:var(--text-muted);font-size:.88rem;text-align:center;padding:1.5rem 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Wakfu gear compare</h1>
+  <p class="subtitle">Compara todas las combinaciones válidas de tus candidatos (máx. 1 reliquia y máx. 1 épico a la vez).</p>
+  <p class="status" id="status">Cargando dataset...</p>
+
+  <div class="panel">
+    <h2>Buscar objetos</h2>
+    <div class="search-row">
+      <input type="text" id="search-input" placeholder="Nombre del objeto (ej. amuleto del dragón)">
+      <select id="slot-filter"><option value="">Todos los slots</option></select>
+    </div>
+    <div class="results-list" id="results-list"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Candidatos</h2>
+    <div class="slots" id="slots"></div>
+    <div class="toolbar">
+      <button id="add-slot-btn">+ Añadir cubo (ej. Anillo 2)</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Comparar</h2>
+    <div class="toolbar">
+      <button class="primary" id="compare-btn">Calcular combinaciones válidas</button>
+      <select id="sort-select"><option value="">Ordenar por...</option></select>
+    </div>
+  </div>
+
+  <div id="results-panel"></div>
+</div>
+
+<script>
+const RAW_URL = "https://raw.githubusercontent.com/jaumander/wakfu-gear-compare/main/items_reduced.json";
+
+let items = [];
+let slotLabels = [];
+let candidatesBySlot = {};
+let lastResults = [];
+
+const statusEl = document.getElementById('status');
+const searchInput = document.getElementById('search-input');
+const slotFilter = document.getElementById('slot-filter');
+const resultsList = document.getElementById('results-list');
+const slotsEl = document.getElementById('slots');
+const sortSelect = document.getElementById('sort-select');
+const resultsPanel = document.getElementById('results-panel');
+
+fetch(RAW_URL)
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(data => {
+    items = data;
+    statusEl.textContent = items.length + ' objetos cargados desde GitHub.';
+    statusEl.className = 'status ok';
+    setupSlotFilter();
+    setupSortOptions();
+    slotLabels = ['Slot 1', 'Slot 2'];
+    slotLabels.forEach(s => candidatesBySlot[s] = []);
+    renderSlots();
+  })
+  .catch(err => {
+    statusEl.textContent = 'No se pudo cargar items_reduced.json desde GitHub (' + err.message + '). Comprueba tu conexión.';
+    statusEl.className = 'status error';
+  });
+
+function setupSlotFilter(){
+  const slots = [...new Set(items.map(it => it.slot))].sort();
+  slots.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    slotFilter.appendChild(opt);
+  });
+}
+
+function setupSortOptions(){
+  const stats = new Set();
+  items.forEach(it => Object.keys(it.stats).forEach(k => stats.add(k)));
+  [...stats].sort().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    sortSelect.appendChild(opt);
+  });
+}
+
+function doSearch(){
+  const q = searchInput.value.trim().toLowerCase();
+  const slot = slotFilter.value;
+  resultsList.innerHTML = '';
+  if (!q){ return; }
+  const matches = items.filter(it =>
+    it.nombre.toLowerCase().includes(q) && (!slot || it.slot === slot)
+  ).slice(0, 60);
+  if (matches.length === 0){
+    resultsList.innerHTML = '<div class="empty-hint">Sin resultados.</div>';
+    return;
+  }
+  matches.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'result-row';
+    const tag = it.es_reliquia ? '<span class="tag reliquia">Reliquia</span>'
+              : it.es_epico ? '<span class="tag epico">Épico</span>' : '';
+    row.innerHTML = `
+      <span class="nombre">${it.nombre} ${tag}</span>
+      <span class="nivel">nvl ${it.nivel}</span>
+      <span class="nivel">${it.slot}</span>
+    `;
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add';
+    addBtn.textContent = '+ Añadir';
+    addBtn.onclick = () => openAddMenu(it);
+    row.appendChild(addBtn);
+    resultsList.appendChild(row);
+  });
+}
+searchInput.addEventListener('input', doSearch);
+slotFilter.addEventListener('change', doSearch);
+
+function openAddMenu(item){
+  if (slotLabels.length === 1){
+    candidatesBySlot[slotLabels[0]].push(item);
+    renderSlots();
+    return;
+  }
+  const choice = prompt(
+    'Añadir "' + item.nombre + '" a qué cubo?\n' + slotLabels.map((s,i)=>(i+1)+': '+s).join('\n'),
+    '1'
+  );
+  const idx = parseInt(choice, 10) - 1;
+  if (idx >= 0 && idx < slotLabels.length){
+    candidatesBySlot[slotLabels[idx]].push(item);
+    renderSlots();
+  }
+}
+
+function renderSlots(){
+  slotsEl.innerHTML = '';
+  slotLabels.forEach(label => {
+    const slotDiv = document.createElement('div');
+    slotDiv.className = 'slot';
+    const header = document.createElement('div');
+    header.className = 'slot-header';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = label;
+    nameInput.onchange = (e) => renameSlot(label, e.target.value);
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove';
+    removeBtn.textContent = 'Quitar cubo';
+    removeBtn.onclick = () => removeSlot(label);
+    header.appendChild(nameInput);
+    header.appendChild(removeBtn);
+    slotDiv.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'candidate-list';
+    const cands = candidatesBySlot[label] || [];
+    if (cands.length === 0){
+      list.innerHTML = '<div class="empty-hint">Sin candidatos. Busca arriba y pulsa "+ Añadir".</div>';
+    } else {
+      cands.forEach((it, i) => {
+        const row = document.createElement('div');
+        row.className = 'candidate';
+        const tag = it.es_reliquia ? '<span class="tag reliquia">Reliquia</span>'
+                  : it.es_epico ? '<span class="tag epico">Épico</span>' : '';
+        row.innerHTML = `<span class="nombre">${it.nombre} ${tag}</span>`;
+        const rm = document.createElement('button');
+        rm.className = 'remove';
+        rm.textContent = 'x';
+        rm.onclick = () => { cands.splice(i,1); renderSlots(); };
+        row.appendChild(rm);
+        list.appendChild(row);
+      });
+    }
+    slotDiv.appendChild(list);
+    slotsEl.appendChild(slotDiv);
+  });
+}
+
+function renameSlot(oldLabel, newLabel){
+  newLabel = newLabel.trim();
+  if (!newLabel || newLabel === oldLabel || slotLabels.includes(newLabel)) { renderSlots(); return; }
+  const idx = slotLabels.indexOf(oldLabel);
+  slotLabels[idx] = newLabel;
+  candidatesBySlot[newLabel] = candidatesBySlot[oldLabel];
+  delete candidatesBySlot[oldLabel];
+  renderSlots();
+}
+
+function removeSlot(label){
+  slotLabels = slotLabels.filter(s => s !== label);
+  delete candidatesBySlot[label];
+  renderSlots();
+}
+
+document.getElementById('add-slot-btn').onclick = () => {
+  let n = 1;
+  let name = 'Slot ' + (slotLabels.length + 1);
+  while (slotLabels.includes(name)) { n++; name = 'Slot ' + (slotLabels.length + n); }
+  slotLabels.push(name);
+  candidatesBySlot[name] = [];
+  renderSlots();
+};
+
+function isValidCombo(combo){
+  const relics = combo.filter(it => it.es_reliquia).length;
+  const epics = combo.filter(it => it.es_epico).length;
+  return relics <= 1 && epics <= 1;
+}
+
+function sumStats(combo){
+  const total = {};
+  combo.forEach(it => {
+    Object.entries(it.stats).forEach(([k,v]) => {
+      total[k] = (total[k] || 0) + v;
+    });
+  });
+  return total;
+}
+
+function cartesian(arrays){
+  return arrays.reduce((acc, arr) => {
+    const res = [];
+    acc.forEach(a => arr.forEach(b => res.push([...a, b])));
+    return res;
+  }, [[]]);
+}
+
+document.getElementById('compare-btn').onclick = () => {
+  const activeSlots = slotLabels.filter(s => (candidatesBySlot[s] || []).length > 0);
+  if (activeSlots.length === 0){
+    resultsPanel.innerHTML = '<div class="empty-state">Añade al menos un candidato en algún cubo.</div>';
+    return;
+  }
+  const optionLists = activeSlots.map(s => candidatesBySlot[s]);
+  const combos = cartesian(optionLists).filter(isValidCombo);
+  lastResults = combos.map(combo => ({
+    labels: activeSlots,
+    items: combo,
+    stats: sumStats(combo)
+  }));
+  renderResults();
+};
+sortSelect.onchange = renderResults;
+
+function renderResults(){
+  if (lastResults.length === 0){
+    resultsPanel.innerHTML = '<div class="empty-state">No hay combinaciones (o todas violan la regla de 1 reliquia / 1 épico).</div>';
+    return;
+  }
+  const sortBy = sortSelect.value;
+  let sorted = [...lastResults];
+  if (sortBy){
+    sorted.sort((a,b) => (b.stats[sortBy]||0) - (a.stats[sortBy]||0));
+  }
+  resultsPanel.innerHTML = '';
+  sorted.forEach((r, i) => {
+    const card = document.createElement('div');
+    card.className = 'combo-card' + (i === 0 && sortBy ? ' best' : '');
+    const itemsHtml = r.labels.map((label, idx) => {
+      const it = r.items[idx];
+      const tag = it.es_reliquia ? '<span class="tag reliquia">Reliquia</span>'
+                : it.es_epico ? '<span class="tag epico">Épico</span>' : '';
+      return `<div><span class="slot-name">${label}:</span> ${it.nombre} ${tag}</div>`;
+    }).join('');
+    const statsHtml = Object.entries(r.stats)
+      .sort((a,b) => b[1]-a[1])
+      .map(([k,v]) => `<div class="stat"><span>${k}</span><span class="v">${Math.round(v*100)/100}</span></div>`)
+      .join('');
+    card.innerHTML = `
+      <div class="combo-title"><span class="rank">Combinación ${i+1} / ${sorted.length}</span></div>
+      <div class="combo-items">${itemsHtml}</div>
+      <div class="stats-grid">${statsHtml}</div>
+    `;
+    resultsPanel.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
