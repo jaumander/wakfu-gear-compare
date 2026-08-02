@@ -62,16 +62,29 @@ y en español.
   reprocesando el dataset real: bajó de 58 nombres de estadística "sucios" a 37 limpios
   (ej. antes "[#charac AP]  PA" y "[#charac AP] - PA máx." salían como texto crudo, ahora
   "PA" y "PA máx.").
+- Arreglado el "Stat desconocida" del Dominio/Resistencia elemental: Ankama tiene 2 sabores
+  de estos stats (confirmado con JSON crudo real pegado por el usuario, actionId 1068/1069
+  = "en N elementos" con el nº en `params[2]`, y actionId 80/120 = aplica siempre a los 4
+  elementos, sin nº) pero el texto oficial para 1068/1069 viene roto, así que ahora se
+  fijan a mano en `build_dataset.py` como "Dominio/Resistencia elemental (N elementos)" o
+  "(todos)". La web (`index.html`) además calcula un "Resistencia/Dominio elemental total"
+  combinando específicas (×1) + "todos" (×4) + "N elementos" (×N) — validado dando 234 vs
+  220 en el caso de prueba real del usuario.
 
 ## Pendiente / decisiones abiertas
+- **Falta regenerar `items_reduced.json`**: el arreglo de arriba está en `build_dataset.py`
+  pero el dataset publicado en el repo es el antiguo. El usuario tiene que volver a correr
+  `python build_dataset.py` en su máquina (usará la caché de `data/`, así que será rápido)
+  y subir/pegar el `items_reduced.json` nuevo para que la web recoja los nombres corregidos.
 - Confirmar la tabla completa de valores de `rareza` (se han visto 1-4 en items de nivel
   bajo; falta mapear qué número corresponde a legendario/mítico/recuerdo, para poder
   filtrar por rareza además de por reliquia/épico).
 - Nombres de estadística sin unificar del todo: "PdV" y "Punto de vida" son la misma stat
   (Vida) pero Ankama los describe con dos textos distintos en su JSON; de momento quedan
-  como dos claves separadas. También queda un cajón "Stat desconocida" (descripciones rotas
-  en el propio JSON de Ankama, no arreglable desde aquí) y una etiqueta suelta en francés.
-  Ninguno de los dos bloquea el uso normal de la herramienta.
+  como dos claves separadas. También queda un cajón "Stat desconocida" (otras descripciones
+  rotas en el propio JSON de Ankama distintas a las ya arregladas, no arreglable desde aquí
+  sin más ejemplos reales) y una etiqueta suelta en francés. Ninguno de los dos bloquea el
+  uso normal de la herramienta.
 - v2 (nice-to-have, sin comprometer ahora): optimización global de las 12 piezas a la vez,
   UI web, soporte de sublimaciones épicas/de reliquia, auto-detección de nueva versión del
   juego.
