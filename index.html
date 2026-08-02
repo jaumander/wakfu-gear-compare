@@ -601,6 +601,11 @@
   .tip .t-row .tv.neg{color:var(--danger);}
   .tip .t-row .tn{color:#c3c9db;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .tip .t-more{font-size:.72rem;color:var(--text-dim);margin-top:.3rem;}
+  .tip .cand-list{max-height:60vh;overflow-y:auto;padding-right:.15rem;}
+  .tip .cand-count{
+    font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted);
+    text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;
+  }
 </style>
 </head>
 <body>
@@ -1157,7 +1162,8 @@ function renderGear(){
       <div class="frame"${frameStyle}>${inner}</div>
       <span class="lbl">${s.corto}</span>`;
     el.onclick = () => selectSlot(s.key);
-    if (first) attachTip(el, first);
+    if (cands.length > 1) attachTipMulti(el, cands);
+    else if (first) attachTip(el, first);
     grid.appendChild(el);
   });
   document.getElementById('gear-count').textContent = totalCandidates() + ' candidatos';
@@ -1271,7 +1277,26 @@ tipEl.className = 'tip';
 tipEl.hidden = true;
 document.body.appendChild(tipEl);
 
-function attachTip(el, it){ el.dataset.tip = '1'; el.__item = it; return el; }
+function attachTip(el, it){ el.dataset.tip = '1'; el.__item = it; el.__items = null; return el; }
+
+/* Igual que attachTip pero para un slot con VARIOS candidatos (ej. "Mano dcha."
+   con 2 armas metidas): en vez de la ficha completa de una, muestra la lista
+   vertical compacta de todos, igual que el panel "Candidatos del slot", para
+   verlos de un vistazo sin tener que pulsar el slot. */
+function attachTipMulti(el, items){ el.dataset.tip = '1'; el.__item = null; el.__items = items; return el; }
+
+function tipHtmlMulti(items){
+  return `
+    <div class="cand-count">${items.length} candidatos en este slot</div>
+    <div class="cand-list">
+      ${items.map(it => `
+        <div class="cand" style="border-left-color:${rarityColor(it.rareza)}">
+          ${itemIconHtml(it, true)}
+          <span class="nm">${rarityGem(it.rareza)} ${it.nombre} ${tagFor(it)}</span>
+          <span class="lv">nvl ${it.nivel}</span>
+        </div>`).join('')}
+    </div>`;
+}
 
 /* Icono del TIPO de objeto (casco, amuleto, botas...). wakassets lo sirve en
    itemTypes/{itemTypeId}.png; build_dataset.py ya guarda ese id como `tipo_id`.
@@ -1338,10 +1363,11 @@ function hideTip(){ tipEl.hidden = true; }
 
 document.addEventListener('mouseover', e => {
   const t = e.target.closest && e.target.closest('[data-tip]');
-  if (!t || !t.__item){ hideTip(); return; }
-  if (tipEl.__for !== t.__item){
-    tipEl.__for = t.__item;
-    tipEl.innerHTML = tipHtml(t.__item);
+  if (!t || (!t.__item && !t.__items)){ hideTip(); return; }
+  const key = t.__items || t.__item;
+  if (tipEl.__for !== key){
+    tipEl.__for = key;
+    tipEl.innerHTML = t.__items ? tipHtmlMulti(t.__items) : tipHtml(t.__item);
   }
   tipEl.hidden = false;
   placeTip(e);
@@ -1359,11 +1385,12 @@ if (window.matchMedia('(hover: none)').matches){
   document.addEventListener('click', e => {
     const ico = e.target.closest && e.target.closest('.itemicon, .gear-slot .frame');
     const host = ico && ico.closest('[data-tip]');
-    if (!host || !host.__item){ hideTip(); return; }
+    if (!host || (!host.__item && !host.__items)){ hideTip(); return; }
     e.preventDefault(); e.stopPropagation();
-    if (!tipEl.hidden && tipEl.__for === host.__item){ hideTip(); return; }
-    tipEl.__for = host.__item;
-    tipEl.innerHTML = tipHtml(host.__item);
+    const key = host.__items || host.__item;
+    if (!tipEl.hidden && tipEl.__for === key){ hideTip(); return; }
+    tipEl.__for = key;
+    tipEl.innerHTML = host.__items ? tipHtmlMulti(host.__items) : tipHtml(host.__item);
     tipEl.hidden = false;
     const r = ico.getBoundingClientRect();
     placeTip({ clientX: r.left + r.width/2, clientY: r.bottom });
