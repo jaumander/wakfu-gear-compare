@@ -56,10 +56,52 @@ las que tengan más de 1 reliquia o más de 1 épico. Puedes pasar tantos slots
 como quieras (2, 4, hasta los 12), y para los anillos simplemente usa dos
 claves distintas (ej. `"Anillo 1"` y `"Anillo 2"`).
 
+## 4. La web (`index.html`)
+
+Un único archivo HTML+CSS+JS, sin paso de build: se abre con doble clic o se
+publica con GitHub Pages. Descarga `items_reduced.json` de este mismo repo al
+abrirse, así siempre usa el dataset más reciente.
+
+Interfaz tipo "ficha de personaje": columna de estadísticas a la izquierda (en
+bloques plegables), ficha de los 12 slots del personaje a la derecha —cada slot
+admite N candidatos para comparar—, buscador de objetos, lista de combinaciones
+válidas y comparador A/B a dos columnas con la diferencia en el centro.
+
+## Procedencia de los iconos (importante)
+
+Los **iconos de estadística** (PA, PdV, Esquiva, Dominio, Resistencia…), las
+**gemas de rareza** y —cuando el dataset traiga el `gfxId`— los **iconos de
+objeto** NO vienen de una fuente oficial de Ankama. Se cargan del repositorio
+comunitario **[Vertylo/wakassets](https://github.com/Vertylo/wakassets)**,
+servido por GitHub Pages:
+
+```
+https://vertylo.github.io/wakassets/{carpeta}/{ID}.png
+```
+
+Ese repo declara explícitamente que todas sus imágenes son **© Ankama** y que se
+publican **solo para proyectos comunitarios sin ánimo de lucro relacionados con
+Wakfu**, que es exactamente el caso de esta herramienta.
+
+Se intentó primero la ruta oficial documentada en el foro de desarrollo de Wakfu
+(`https://s.ankama.com/www/static.ankama.com/wakfu/portal/game/item/115/{gfxId}.png`);
+al probarla no respondió, y además requiere el campo `gfxId` que `build_dataset.py`
+todavía no guarda. Mientras ese campo no exista, el icono de cada objeto se
+sustituye por un **marco con el color de su rareza y la inicial del objeto**; en
+cuanto el dataset incluya `gfx` / `gfxId` / `gfx_id`, la web usa el icono real sin
+tocar nada más.
+
+Los **colores de rareza** de la interfaz no están inventados: se han medido pixel
+a pixel sobre los propios PNG `rarities/0..7.png` de wakassets. El **nombre** de
+cada número de rareza sigue sin confirmarse (pendiente abierto en PROJECT.md), así
+que la interfaz nunca muestra una etiqueta de rareza, solo la gema y el color.
+
 ## Pendiente de confirmar
 
 - Tabla completa de valores de `rareza` (se ven 1-4 en items de nivel bajo;
   falta confirmar qué número corresponde a legendario/mítico/recuerdo/etc.
   para poder filtrar por rareza además de por reliquia/épico).
+- El campo `gfxId` en `build_dataset.py`, para poder mostrar el icono real de
+  cada objeto (ver HANDOFF.md).
 - Ampliar a las 12 piezas simultáneas con optimización global (nice-to-have
   v2, discutido en la conversación).
