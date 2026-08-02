@@ -40,6 +40,7 @@ ALREADY_FIXED = set(bd.ELEMENTAL_N_ACTION_IDS) | set(bd.ELEMENTAL_ALL_ACTION_IDS
 
 problematic = Counter()
 examples = {}
+MAX_EXAMPLES = 8
 for entry in items:
     item_def = entry["definition"]["item"]
     title = entry.get("title", {})
@@ -53,9 +54,12 @@ for entry in items:
         label = action_map.get(action_id, f"accion_{action_id}")
         if label == "Stat desconocida" or label.startswith("accion_"):
             problematic[action_id] += 1
-            examples.setdefault(action_id, (name, params))
+            examples.setdefault(action_id, [])
+            if len(examples[action_id]) < MAX_EXAMPLES:
+                examples[action_id].append((name, item_def.get("level"), params))
 
 print(f"Total actionIds problematicos SIN resolver todavia: {len(problematic)}")
 for action_id, count in sorted(problematic.items(), key=lambda kv: -kv[1]):
-    name, params = examples[action_id]
-    print(f"  actionId={action_id}  apariciones={count}  ejemplo={name!r}  params={params}  raw={raw_by_id.get(action_id)!r}")
+    print(f"\nactionId={action_id}  apariciones={count}  raw={raw_by_id.get(action_id)!r}")
+    for name, level, params in examples[action_id]:
+        print(f"  ejemplo: {name!r}  (nivel {level})  params={params}")
