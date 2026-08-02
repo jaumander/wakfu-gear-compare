@@ -151,6 +151,12 @@ def build_reduced_items(items, slot_map, action_map):
         # Es lo que necesita la web para pintar el icono real de cada objeto.
         gfx_id = item_def.get("graphicParameters", {}).get("gfxId")
 
+        # itemTypeId: lo usa la web para pintar el icono del TIPO de objeto
+        # (casco, amuleto, botas...) en el tooltip. wakassets lo sirve en
+        # itemTypes/{itemTypeId}.png y coincide con el mapeo que ya usamos aqui
+        # para asignar el slot (build_slot_map).
+        type_icon_id = type_id
+
         stats = {}
         for eff in entry["definition"].get("equipEffects", []):
             definition = eff["effect"]["definition"]
@@ -177,6 +183,7 @@ def build_reduced_items(items, slot_map, action_map):
         reduced.append({
             "id": item_def["id"],
             "gfx": gfx_id,
+            "tipo_id": type_icon_id,
             "nombre": name,
             "slot": slot_label,
             "nivel": item_def["level"],
@@ -206,6 +213,8 @@ def main():
 
     con_gfx = sum(1 for it in reduced if it.get("gfx"))
     print(f"  objetos con gfx (icono): {con_gfx} / {len(reduced)}")
+    con_tipo = sum(1 for it in reduced if it.get("tipo_id"))
+    print(f"  objetos con tipo_id (icono de tipo): {con_tipo} / {len(reduced)}")
     if con_gfx < len(reduced):
         print("  aviso: algunos objetos no traen graphicParameters.gfxId;")
         print("         la web les pondra un marco de rareza con la inicial.")
