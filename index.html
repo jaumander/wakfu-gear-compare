@@ -1277,7 +1277,7 @@ function tipHtml(it){
     </div>
     <div class="t-rows">
       ${shown.map(([k,v]) => `<div class="t-row">
-        <span class="tv ${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${rounded(v)}</span>
+        <span class="tv ${v > 0 ? 'pos' : 'neg'}"${vStyle(k, v)}>${v > 0 ? '+' : ''}${rounded(v)}</span>
         ${statIconSmall(k) || '<span style="width:17px"></span>'}
         <span class="tn">${k}</span>
       </div>`).join('')}
@@ -1412,7 +1412,7 @@ function doSearch(){
     card.className = 'find-full';
     card.style.borderLeftColor = rarityColor(it.rareza);
     const filas = flatOrderedStats(it.stats).map(([k,v]) =>
-      `<div class="fstat"><span class="fv">${v > 0 ? '+' : ''}${Math.round(v*100)/100}</span>${statIconSmall(k)}<span class="fn">${k}</span></div>`
+      `<div class="fstat"><span class="fv"${vStyle(k, v)}>${v > 0 ? '+' : ''}${Math.round(v*100)/100}</span>${statIconSmall(k)}<span class="fn">${k}</span></div>`
     ).join('') || '<div class="hint">Sin stats.</div>';
     const head = document.createElement('div');
     head.className = 'fhead';
@@ -1565,6 +1565,37 @@ function cartesian(arrays){
    tarjeta), no en un modal aparte: así se ve el total y de qué se compone sin
    perder de vista el resto de la combinación.
    ========================================================================= */
+/* Color del NUMERO segun la stat, como hace la ficha del propio juego.
+   Los colores NO estan inventados: se han medido pixel a pixel sobre los iconos
+   de wakassets (elements/FIRE|WATER|EARTH|AIR y characteristics/HP|AP|MP|WP),
+   cogiendo el tono dominante saturado y subiendolo lo justo para que se lea
+   sobre el fondo oscuro.
+
+   Ojo con una cosa: el juego ademas pinta de VERDE todo lo positivo de Combate y
+   Secundario. Aqui no se hace, a proposito: el comparador A/B ya usa verde/rojo
+   para la diferencia, y si todo lo positivo fuese verde ese verde dejaria de
+   significar nada. Lo negativo si se pinta en rojo, que es informativo y raro. */
+const STAT_COLOR = [
+  [n => n === 'pdv' || n === 'vida' || n === 'vitalidad' || n.startsWith('punto de vida'), '#ff5b5b'],
+  [n => n === 'pa' || n.startsWith('pa má') || n.startsWith('punto de acci'),   '#4a9dff'],
+  [n => n === 'pm' || n.startsWith('pm má') || n.startsWith('punto de movim'), '#aed24e'],
+  [n => n === 'pw' || n.startsWith('pw má') || n.startsWith('punto de volun'), '#3fd9c0'],
+  [n => n.includes('fuego'),  '#ed5616'],
+  [n => n.includes('agua'),   '#2fa8e0'],
+  [n => n.includes('tierra'), '#cbe140'],
+  [n => n.includes('aire'),   '#bc90c5'],
+];
+function statColor(name, v){
+  if (v < 0) return 'var(--danger)';
+  const n = (name || '').toLowerCase().trim();
+  for (const [test, c] of STAT_COLOR) if (test(n)) return c;
+  return null;
+}
+function vStyle(name, v){
+  const c = statColor(name, v);
+  return c ? ` style="color:${c}"` : '';
+}
+
 function statRowHtml(k, v, r){
   const rounded = Math.round(v*100)/100;
 
@@ -1584,7 +1615,7 @@ function statRowHtml(k, v, r){
       </div>`;
     }).join('');
     return `<details class="srow-d" open>
-      <summary>${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></summary>
+      <summary>${statIcon(k)}<span class="nm">${k}</span><span class="v"${vStyle(k, v)}>${rounded}</span></summary>
       <div class="sub dom-sub">${filas}</div>
     </details>`;
   }
@@ -1606,15 +1637,15 @@ function statRowHtml(k, v, r){
         const t = e.mult > 1
           ? ` title="${e.stat}: ${Math.round(e.value*100)/100} × ${e.mult} elementos = ${Math.round(e.aporta*100)/100}"`
           : '';
-        return `<div class="srow"${t}>${statIcon(e.stat)}<span class="nm">${e.stat}</span>${x}<span class="v">${Math.round(e.aporta*100)/100}</span></div>`;
+        return `<div class="srow"${t}>${statIcon(e.stat)}<span class="nm">${e.stat}</span>${x}<span class="v"${vStyle(e.stat, e.aporta)}>${Math.round(e.aporta*100)/100}</span></div>`;
       })
       .join('');
     return `<details class="srow-d" open>
-      <summary>${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></summary>
+      <summary>${statIcon(k)}<span class="nm">${k}</span><span class="v"${vStyle(k, v)}>${rounded}</span></summary>
       <div class="sub">${sub}</div>
     </details>`;
   }
-  return `<div class="srow">${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></div>`;
+  return `<div class="srow">${statIcon(k)}<span class="nm">${k}</span><span class="v"${vStyle(k, v)}>${rounded}</span></div>`;
 }
 
 function buildStatsGridHtml(r){
