@@ -11,7 +11,7 @@ Al empezar cualquier conversación donde haya que tocar el código o el PROJECT.
 2. Lee HANDOFF.md en la raíz: si dice "Nada en curso", trabaja normal desde PROJECT.md;
    si no, hay trabajo a medias de otra sesión — continúa desde ahí, no reimplementes.
 
-token_for_claude: <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>
+token_for_claude: <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>
 
 Antes de tocar código o asumir un campo/formato del JSON de Ankama (mapeo de itemTypeId a
 slot, valores de "rareza", qué actionId corresponde a qué stat, etc.), verifica el dato real
