@@ -1,0 +1,46 @@
+[
+  {
+    "id": 90001,
+    "nombre": "Amuleto Legendario de Ejemplo",
+    "slot": "Amuleto",
+    "nivel": 230,
+    "rareza": 5,
+    "set_id": 0,
+    "es_reliquia": false,
+    "es_epico": false,
+    "stats": {"Vitalidad": 400, "Maestria Elemental": 250, "Golpe Critico": 8}
+  },
+  {
+    "id": 90002,
+    "nombre": "Amuleto Reliquia de Ejemplo",
+    "slot": "Amuleto",
+    "nivel": 230,
+    "rareza": 6,
+    "set_id": 0,
+    "es_reliquia": true,
+    "es_epico": false,
+    "stats": {"Vitalidad": 600, "Maestria Elemental": 320, "Golpe Critico": 5}
+  },
+  {
+    "id": 90003,
+    "nombre": "Botas Legendarias de Ejemplo",
+    "slot": "Botas",
+    "nivel": 230,
+    "rareza": 5,
+    "set_id": 0,
+    "es_reliquia": false,
+    "es_epico": false,
+    "stats": {"PM": 1, "Esquiva": 300, "Vitalidad": 100}
+  },
+  {
+    "id": 90004,
+    "nombre": "Botas Reliquia de Ejemplo",
+    "slot": "Botas",
+    "nivel": 230,
+    "rareza": 6,
+    "set_id": 0,
+    "es_reliquia": true,
+    "es_epico": false,
+    "stats": {"PM": 1, "Esquiva": 450, "Vitalidad": 250}
+  }
+]

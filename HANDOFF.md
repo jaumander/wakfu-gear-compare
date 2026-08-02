@@ -1,0 +1,13 @@
+Nada en curso.
+
+<!--
+Plantilla para cuando quede trabajo a medias:
+
+## En curso: <nombre de la feature/milestone>
+- Milestone actual: X/Y
+- Qué está hecho: ...
+- Qué falta: ...
+- Archivos tocados en este milestone: ...
+- Último commit: <hash o mensaje>
+- Cualquier decisión o duda pendiente de confirmar con el usuario: ...
+-->
