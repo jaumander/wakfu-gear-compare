@@ -54,6 +54,18 @@ EPIC_PROPERTY_ID = 12   # "solo 1 equipado a la vez" (épico)
 ELEMENTAL_N_ACTION_IDS = {1068: "Dominio elemental", 1069: "Resistencia elemental"}
 ELEMENTAL_ALL_ACTION_IDS = {80: "Resistencia elemental (todos)", 120: "Dominio elemental (todos)"}
 
+# actionId 39/40: plantilla generica "[#1]{...%} [#3]" cuyo texto en actions.json NO
+# sirve para saber el nombre (a diferencia de arriba, aqui el numero en params[4] NO
+# es un actionId real, es un codigo de caracteristica en una tabla aparte que no
+# tenemos). Confirmado contra capturas del propio juego (2026-08): actionId 39 con
+# params[4]=120.0 en "Varita de mago gris" = "5% de armadura dada" (5.0 = params[0]),
+# y con params[4]=121.0 en "Botas rompehielos" = "5% de armadura recibida". Solo se
+# han visto estos 2 valores en los 216 objetos reales que usan 39/40 (ver
+# diagnose_stats2.py). actionId 40 es la version en negativo (el texto crudo empieza
+# por "-"), asi que se le resta el valor en vez de sumarlo.
+ARMOR_ACTION_IDS = (39, 40)
+ARMOR_PARAM4_LABELS = {120: "Armadura dada", 121: "Armadura recibida"}
+
 
 def fetch_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": "wakfu-gear-compare/1.0"})
@@ -173,6 +185,13 @@ def build_reduced_items(items, slot_map, action_map):
                 stat_name = f"{base_label} ({int(count)} elementos)" if count else base_label
             elif action_id in ELEMENTAL_ALL_ACTION_IDS:
                 stat_name = ELEMENTAL_ALL_ACTION_IDS[action_id]
+            elif action_id in ARMOR_ACTION_IDS:
+                ref = params[4] if len(params) > 4 and isinstance(params[4], (int, float)) else None
+                stat_name = ARMOR_PARAM4_LABELS.get(int(ref)) if ref is not None else None
+                if stat_name is None:
+                    stat_name = f"accion_{action_id}"
+                if action_id == 40:
+                    value = -value
             else:
                 stat_name = action_map.get(action_id, f"accion_{action_id}")
             stats[stat_name] = stats.get(stat_name, 0) + value
