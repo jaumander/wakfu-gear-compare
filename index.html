@@ -203,6 +203,14 @@
   details.srow-d .sub .srow{font-size:.76rem;background:none;}
   details.srow-d .sub .srow .nm{color:var(--text-muted);}
   details.srow-d .sub .srow .v{color:var(--text-muted);font-weight:600;}
+  details.srow-d .sub .mult{
+    font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);
+    background:rgba(255,255,255,.04);border-radius:4px;padding:0 .3rem;flex:none;
+  }
+  details.srow-d .sub-note{
+    font-size:.68rem;color:var(--text-dim);line-height:1.35;
+    padding:.3rem .4rem 0;text-wrap:pretty;
+  }
 
   .mode-toggle{display:flex;gap:.25rem;padding:.55rem .95rem;border-bottom:1px solid var(--border-soft);}
   .mode-toggle button{
@@ -1373,10 +1381,10 @@ function foldElementalStats(stats){
 
     if (isResComponent){
       resTotal += v * resMult;
-      breakdown['Resistencia elemental total'].push({ stat: k, value: v });
+      breakdown['Resistencia elemental total'].push({ stat: k, value: v, mult: resMult, aporta: v * resMult });
     } else if (isDomComponent){
       domTotal += v * domMult;
-      breakdown['Dominio elemental total'].push({ stat: k, value: v });
+      breakdown['Dominio elemental total'].push({ stat: k, value: v, mult: domMult, aporta: v * domMult });
     } else {
       folded[k] = v;
     }
@@ -1408,14 +1416,24 @@ function statRowHtml(k, v, r){
   const rounded = Math.round(v*100)/100;
   const parts = (ELEMENTAL_TOTAL_KEYS.includes(k) && r && r.breakdown && r.breakdown[k]) ? r.breakdown[k] : null;
   if (parts && parts.length){
+    // Cada linea muestra lo que REALMENTE aporta al total, no el valor en bruto:
+    // "Dominio elemental (2 elementos) 280" aporta 560, porque aplica a 2
+    // elementos. Sin esto los hijos no sumaban el padre y parecia que el total
+    // estuviera contando ademas los dominios secundarios, que no es el caso
+    // (crítico, espalda, melé... van aparte, en el bloque Secundario).
     const sub = parts
       .filter(e => e.value !== 0)
-      .sort((a,b) => b.value - a.value)
-      .map(e => `<div class="srow">${statIcon(e.stat)}<span class="nm">${e.stat}</span><span class="v">${Math.round(e.value*100)/100}</span></div>`)
+      .sort((a,b) => b.aporta - a.aporta)
+      .map(e => {
+        const x = e.mult > 1
+          ? `<span class="mult">${Math.round(e.value*100)/100} ×${e.mult}</span>`
+          : '';
+        return `<div class="srow">${statIcon(e.stat)}<span class="nm">${e.stat}</span>${x}<span class="v">${Math.round(e.aporta*100)/100}</span></div>`;
+      })
       .join('');
     return `<details class="srow-d">
       <summary>${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></summary>
-      <div class="sub">${sub}</div>
+      <div class="sub">${sub}<div class="sub-note">Solo dominios elementales. Los secundarios (crítico, espalda, melé…) van en su propio bloque.</div></div>
     </details>`;
   }
   return `<div class="srow">${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></div>`;
