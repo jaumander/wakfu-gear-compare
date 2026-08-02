@@ -295,6 +295,8 @@ function doSearch(){
         opt.textContent = label;
         bucketSelect.appendChild(opt);
       });
+      const firstEmpty = slotLabels.find(label => (candidatesBySlot[label] || []).length === 0);
+      bucketSelect.value = firstEmpty || slotLabels[0];
       row.appendChild(bucketSelect);
       const addBtn = document.createElement('button');
       addBtn.className = 'add';
@@ -302,6 +304,7 @@ function doSearch(){
       addBtn.onclick = () => {
         candidatesBySlot[bucketSelect.value].push(it);
         renderSlots();
+        doSearch();
       };
       row.appendChild(addBtn);
     } else {
