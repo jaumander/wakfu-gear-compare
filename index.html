@@ -209,23 +209,26 @@
      lo que aporta la linea, y el calculo va en el title. */
   .stats-grid details.srow-d .sub .mult{display:none;}
 
-  /* dominio elemental: reparto por objeto y total al final */
-  .dom-block{display:block;}
+  /* dominio elemental: reparto por objeto y total al final. Se maqueta con las
+     mismas columnas que el resto de stats para que no cante, y el «x2» va
+     siempre visible (saber a cuantos elementos aplica es justo el dato clave). */
+  .dom-block{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.15rem .5rem;}
   .stats-grid .dom-block{grid-column:1/-1;}
-  .srow.dom-src .dot{width:8px;height:8px;border-radius:2px;flex:none;margin:0 5px;}
-  .srow.dom-src .nm{color:var(--text-muted);min-width:3.2rem;}
+  .srow.dom-src .dot{width:8px;height:8px;border-radius:2px;flex:none;margin-left:5px;}
+  .srow.dom-src .nm{color:var(--text-muted);min-width:2.6rem;}
   .srow.dom-src .v{color:var(--text-muted);font-weight:600;}
   .srow.dom-src .mult{
-    font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);
-    background:rgba(255,255,255,.04);border-radius:4px;padding:0 .3rem;flex:none;
+    font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;
+    color:var(--gold);background:rgba(241,193,58,.12);
+    border-radius:4px;padding:0 .32rem;flex:none;
   }
   .srow.dom-total{
-    border-top:1px solid var(--border-soft);margin-top:.15rem;padding-top:.3rem;background:none;
+    grid-column:1/-1;width:max-content;max-width:100%;
+    margin-top:.15rem;background:rgba(255,255,255,.022);
   }
   .srow.dom-total .mult.sum{
     font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);flex:none;
   }
-  .stats-grid .srow.dom-src .mult, .stats-grid .srow.dom-total .mult{display:none;}
   details.srow-d .sub .srow .v{color:var(--text-muted);font-weight:600;}
   details.srow-d .sub .mult{
     font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);
@@ -1477,7 +1480,7 @@ function statRowHtml(k, v, r){
       return `<div class="srow dom-src" title="${e.slot} — ${e.stat}: ${val}${e.mult>1?' × '+e.mult+' elementos':''} = ${ap}">
         <span class="dot" style="background:${rarityColor(e.rareza)}"></span>
         <span class="nm">${e.nombre}</span>
-        <span class="mult">${val}${e.mult>1?' ×'+e.mult:''}</span>
+        <span class="mult">${val} ×${e.mult}</span>
         <span class="v">${ap}</span>
       </div>`;
     }).join('');
