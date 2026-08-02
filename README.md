@@ -16,7 +16,8 @@ Esto descarga `items.json`, `itemTypes.json`, `itemProperties.json` y
 `actions.json` de la versión actual del juego, y genera `items_reduced.json`
 con solo los objetos equipables de los 12 slots (casco, amuleto, pechera,
 anillos, botas, capa, hombreras, cinturón, mano izq/der, emblema), cada uno
-con: nombre, slot, nivel, rareza, si es reliquia/épico, y sus stats.
+con: nombre, slot, nivel, rareza, si es reliquia/épico, sus stats y el `gfx`
+(identificador del icono del objeto).
 
 > Nota: `items.json` pesa 20+MB, la primera descarga puede tardar unos
 > segundos. Los archivos se cachean en `data/` para no re-descargarlos si
@@ -84,12 +85,16 @@ publican **solo para proyectos comunitarios sin ánimo de lucro relacionados con
 Wakfu**, que es exactamente el caso de esta herramienta.
 
 Se intentó primero la ruta oficial documentada en el foro de desarrollo de Wakfu
-(`https://s.ankama.com/www/static.ankama.com/wakfu/portal/game/item/115/{gfxId}.png`);
-al probarla no respondió, y además requiere el campo `gfxId` que `build_dataset.py`
-todavía no guarda. Mientras ese campo no exista, el icono de cada objeto se
-sustituye por un **marco con el color de su rareza y la inicial del objeto**; en
-cuanto el dataset incluya `gfx` / `gfxId` / `gfx_id`, la web usa el icono real sin
-tocar nada más.
+(`https://s.ankama.com/www/static.ankama.com/wakfu/portal/game/item/115/{gfxId}.png`):
+se probó con 5 `gfxId` reales del dataset (1202021, 1032022, 1192023, 1322024,
+1332025) y **fallaron los 5** — esa ruta de 2020 ya no sirve. Los mismos 5 `gfxId`
+cargan correctamente en wakassets (64×64, icono correcto), así que esa es la fuente.
+
+El campo `gfxId` está confirmado contra el `items.json` real (versión 1.92.1.59):
+vive en `definition.item.graphicParameters.gfxId` y **no** coincide con el `id` del
+objeto (ej. id 2021 → gfxId 1202021). `build_dataset.py` lo guarda como `gfx` en
+`items_reduced.json`. Si un objeto no lo trae, la web dibuja un marco con el color de
+su rareza y la inicial del objeto.
 
 Los **colores de rareza** de la interfaz no están inventados: se han medido pixel
 a pixel sobre los propios PNG `rarities/0..7.png` de wakassets. El **nombre** de
@@ -101,7 +106,5 @@ que la interfaz nunca muestra una etiqueta de rareza, solo la gema y el color.
 - Tabla completa de valores de `rareza` (se ven 1-4 en items de nivel bajo;
   falta confirmar qué número corresponde a legendario/mítico/recuerdo/etc.
   para poder filtrar por rareza además de por reliquia/épico).
-- El campo `gfxId` en `build_dataset.py`, para poder mostrar el icono real de
-  cada objeto (ver HANDOFF.md).
 - Ampliar a las 12 piezas simultáneas con optimización global (nice-to-have
   v2, discutido en la conversación).
