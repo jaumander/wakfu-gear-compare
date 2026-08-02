@@ -158,7 +158,7 @@ objeto en la izquierda".
   mano → 3 combinaciones crudas en vez de 4, todas válidas); dataset real regenerado por
   el usuario y verificado: **509 armas de 2 manos** de 7730 objetos.
 
-## EN CURSO: Filtros rápidos en el buscador
+## Hecho: Filtros rápidos en el buscador (los 3 milestones completos)
 
 **Motivación:** el usuario quiere filtrar más rápido sin desplegables: un slider de nivel
 de 2 puntos (en vez del dropdown de franjas), iconos de rareza que se pueden apagar/encender
@@ -191,10 +191,20 @@ de Equipo) justo encima del buscador.
 3/3 — Iconos de tipo de equipo como atajo de `selectSlot()`, con el icono activo resaltado
       igual que en el grid de Equipo.
 
-**Última sesión (2026-08-02, transcript sin commitear):** hubo un intento previo de este
-mismo milestone 1/3 que nunca llegó a commitearse (la sesión se cortó a medias), así que
-no hay código suyo reutilizable en el repo — se reimplementa desde cero en base a este
-alcance.
+**Estado: completo.** Los 3 milestones están implementados y pusheados:
+- 1/3 slider de nivel de 2 puntos (sustituye el dropdown de franjas fijas).
+- 2/3 iconos de rareza (0-7) para ocultar/mostrar en el buscador, apagados/encendidos
+  independientes entre sí.
+- 3/3 iconos de tipo de equipo como atajo de `selectSlot()`, resaltado el activo igual
+  que en el grid de Equipo (mismo estado `activeSlot`, sin duplicar lógica).
+Validado con `node --check` sobre el JS extraído del archivo tras cada milestone (sin
+errores de sintaxis); no se ha podido probar en un navegador real dentro de este entorno,
+así que conviene que el usuario lo abra una vez y confirme que el slider y los iconos
+responden bien al tacto/ratón antes de darlo por cerrado del todo.
+
+**Nota sobre la sesión anterior (2026-08-02):** hubo un intento previo de este mismo
+milestone 1/3 que nunca llegó a commitearse (la sesión se cortó a medias sin dejar nada en
+git), así que se reimplementó desde cero en esta sesión siguiendo este alcance.
 
 ## Pendiente / decisiones abiertas
 - **"Poids" de Stratfu**: métrica de valor global de un objeto. No se sabe cómo la calculan
