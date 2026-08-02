@@ -367,10 +367,7 @@
     background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
     padding:.7rem .8rem;margin-bottom:.6rem;
   }
-  .combo-card.best{
-    border-color:rgba(241,193,58,.55);
-    box-shadow:0 0 0 1px rgba(241,193,58,.16), 0 0 22px -8px rgba(241,193,58,.55);
-  }
+  .combo-card.picked{border-color:var(--ok);}
   .combo-card{animation:pop .22s ease both;}
   @keyframes pop{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
   .combo-card.picked{border-color:var(--ok);}
@@ -404,6 +401,16 @@
   .piece .tag{flex:none;}
   .piece .ps{color:var(--text-dim);font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;}
   .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:.15rem .5rem;}
+  /* cabecera de grupo dentro de la rejilla de stats: ocupa toda la fila, para que
+     las stats no se lean como una sopa de letras */
+  .stats-grid .gh{
+    grid-column:1/-1;display:flex;align-items:center;gap:.45rem;
+    font-family:'Baloo 2',sans-serif;font-size:.68rem;font-weight:600;
+    text-transform:uppercase;letter-spacing:.09em;color:var(--text-dim);
+    margin:.45rem 0 .1rem;
+  }
+  .stats-grid .gh::after{content:'';flex:1;height:1px;background:var(--border-soft);}
+  .stats-grid .gh:first-child{margin-top:0;}
 
   /* ---------- comparador ---------- */
   .cmp{
@@ -431,6 +438,14 @@
     font-family:'Baloo 2',sans-serif;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;
     color:var(--text-muted);text-align:center;margin-bottom:.5rem;
   }
+  .cmp-mid .gh{
+    display:flex;align-items:center;gap:.45rem;
+    font-family:'Baloo 2',sans-serif;font-size:.68rem;font-weight:600;
+    text-transform:uppercase;letter-spacing:.09em;color:var(--text-dim);
+    margin:.5rem 0 .15rem;
+  }
+  .cmp-mid .gh::after{content:'';flex:1;height:1px;background:var(--border-soft);}
+  .cmp-mid .gh:first-child{margin-top:0;}
   .drow{
     display:flex;align-items:center;gap:.4rem;padding:.22rem .35rem;border-radius:6px;font-size:.78rem;
   }
@@ -626,7 +641,7 @@ let sheetSource = null;
    con 7 slots x 3 candidatos ya son 2187 combinaciones y la pestana se cuelga.
    Se avisa ANTES de calcular y no se llega a generar nada por encima del tope. */
 const MAX_COMBOS = 250;
-const MAX_CARDS = 40;   // cuantas tarjetas se pintan (las mejores del orden elegido)
+const MAX_CARDS = 40;   // cuantas tarjetas se pintan (segun el orden elegido)
 
 /* Normaliza para buscar: sin mayusculas y sin acentos, para que "critico"
    encuentre "critico" y "crítico" igual. */
@@ -790,6 +805,18 @@ function statIconSmall(name){
    cajón de sastre, para que nunca se pierda un stat que Ankama añada o renombre. */
 const has = (n, ...frags) => frags.some(f => n.includes(f));
 
+/* Resistencia ELEMENTAL (la del bloque "Resistencias", que en el juego va al
+   final). Se aisla en una funcion porque varios bloques dicen "resistencia" y
+   hay que evitar que se la queden antes de tiempo. */
+const esResElem = n => has(n,'resistencia elemental') || /resistencia (al|a la) /.test(n);
+/* Dominio ELEMENTAL (el bloque "Dominios"), frente a los dominios secundarios
+   (critico, espalda, mele, distancia, berserker, cura). */
+const esDomElem = n => has(n,'dominio elemental') || /dominio de (agua|aire|fuego|tierra|luz)/.test(n);
+
+/* Orden de los bloques = el que usa el propio juego al describir un objeto:
+   principales > dominios > combate > secundario > resistencias.
+   En el modo Aptitudes: mayor > agilidad > suerte > fuerza > inteligencia. */
+
 const MODES = {
   juego: {
     label:'Personaje',
@@ -797,9 +824,8 @@ const MODES = {
       { title:'Principales', orden:['pdv','punto de vida','vida','pa','pm','pw'],
         match:n => ['pdv','punto de vida','vida','vitalidad','pa','pm','pw'].includes(n)
                 || /^p[amw] má/.test(n) },
-      { title:'Dominios y resistencias', orden:['dominio elemental total','resistencia elemental total'],
-        match:n => has(n,'elemental') || /dominio de (agua|aire|fuego|tierra|luz)/.test(n)
-                || /resistencia (al|a la) /.test(n) },
+      { title:'Dominios', orden:['dominio elemental total'],
+        match:n => esDomElem(n) },
       { title:'Combate',
         orden:['daños infligidos','curación realizada','golpe crítico','anticipación',
                'iniciativa','alcance','esquiva','placaje','sabiduría','prospección','voluntad','control'],
@@ -810,20 +836,23 @@ const MODES = {
         orden:['dominio crítico','resistencia crítica','dominio espalda','resistencia espalda',
                'dominio de melé','armadura dada','dominio a distancia','armadura recibida',
                'dominio cura','daños indirectos','dominio berserker'],
-        match:n => has(n,'dominio','resistencia','armadura','daños indirectos','daño indirecto','barrera') },
+        match:n => !esResElem(n)
+                && has(n,'dominio','resistencia','armadura','daños indirectos','daño indirecto') },
+      { title:'Resistencias', orden:['resistencia elemental total'],
+        match:n => esResElem(n) || has(n,'barrera') },
       { title:'Otros', match:() => true },
     ]
   },
   aptitudes: {
     label:'Aptitudes',
     blocks:[
-      { title:'Inteligencia', orden:['pdv','resistencia elemental total','barrera'],
-        match:n => n === 'pdv' || n === 'punto de vida' || n === 'vida' || n === 'vitalidad'
-                || has(n,'resistencia elemental','barrera','parapeto','armadura recibida')
-                || /resistencia (al|a la) /.test(n) },
-      { title:'Fuerza', orden:['dominio elemental total','dominio de melé','dominio a distancia'],
-        match:n => has(n,'dominio elemental') || has(n,'dominio de melé','dominio a distancia','dominio distancia')
-                || /dominio de (agua|aire|fuego|tierra|luz)/.test(n) },
+      { title:'Mayor',
+        orden:['pa','pm','alcance','pw','armadura dada','daños infligidos',
+               'curación realizada','daños indirectos','control'],
+        match:n => ['pa','pm','pw'].includes(n) || /^p[amw] má/.test(n)
+                || has(n,'alcance','armadura dada','daños infligidos','daño infligido',
+                       'curación realizada','daños indirectos','daño indirecto',
+                       'control','sabiduría','prospección') },
       { title:'Agilidad', orden:['placaje','esquiva','iniciativa','voluntad'],
         match:n => has(n,'placaje','esquiva','iniciativa','voluntad') },
       { title:'Suerte',
@@ -831,12 +860,11 @@ const MODES = {
                'dominio berserker','dominio cura','resistencia espalda','resistencia crítica'],
         match:n => has(n,'crítico','critica','crítica','anticipa','parada','bloqueo','espalda',
                        'berserk','cura') },
-      { title:'Mayor',
-        orden:['pa','pm','alcance','pw','armadura dada','daños infligidos',
-               'curación realizada','daños indirectos'],
-        match:n => ['pa','pm','pw'].includes(n) || /^p[amw] má/.test(n)
-                || has(n,'alcance','armadura','daños infligidos','daño infligido','curación',
-                       'daños indirectos','daño indirecto','control','sabiduría','prospección') },
+      { title:'Fuerza', orden:['dominio elemental total','dominio de melé','dominio a distancia'],
+        match:n => esDomElem(n) || has(n,'dominio de melé','dominio a distancia','dominio distancia') },
+      { title:'Inteligencia', orden:['pdv','resistencia elemental total','barrera'],
+        match:n => ['pdv','punto de vida','vida','vitalidad'].includes(n)
+                || esResElem(n) || has(n,'barrera','parapeto','armadura') },
       { title:'Otros', match:() => true },
     ]
   }
@@ -874,6 +902,7 @@ function groupedStats(stats){
 function flatOrderedStats(stats){
   return groupedStats(stats).flatMap(g => g.rows);
 }
+// (flatOrderedStats se conserva por si hace falta una lista sin cabeceras)
 
 /* =========================================================================
    CARGA
@@ -1393,8 +1422,11 @@ function statRowHtml(k, v, r){
 }
 
 function buildStatsGridHtml(r){
-  return flatOrderedStats(r.stats)
-    .map(([k,v]) => statRowHtml(k, v, r))
+  // Con cabecera de grupo, para que las stats no se lean como una sopa de letras:
+  // mismo agrupado y mismo orden que la ficha de la izquierda.
+  return groupedStats(r.stats)
+    .map(g => `<div class="gh">${g.title}</div>`
+             + g.rows.map(([k,v]) => statRowHtml(k, v, r)).join(''))
     .join('');
 }
 
@@ -1541,15 +1573,12 @@ function renderResults(){
     r.titulo = 'Combinación ' + (i+1);
     r.subtitulo = r.items.map(it => it.nombre).join(' · ');
     const card = document.createElement('div');
-    card.className = 'combo-card'
-      + (i === 0 && sortBy ? ' best' : '')
-      + (sheetSource === r ? ' picked' : '');
+    card.className = 'combo-card' + (sheetSource === r ? ' picked' : '');
     const enAB = compareSelection.includes(r);
     card.innerHTML = `
       <div class="combo-head">
         <button class="btn-sheet${sheetSource === r ? ' sheet-on' : ''}">Ficha</button>
         <button class="btn-ab${enAB ? ' on' : ''}">${enAB ? (compareSelection[0] === r ? 'A ✓' : 'B ✓') : 'A/B'}</button>
-        ${i === 0 && sortBy ? '<span class="tag reliquia">Mejor</span>' : ''}
         <span class="rank">${i+1} / ${sorted.length}</span>
       </div>
       <div class="combo-pieces">${comboPiecesHtml(r)}</div>
@@ -1563,8 +1592,8 @@ function renderResults(){
   if (sorted.length > shown.length){
     const note = document.createElement('div');
     note.className = 'cap-note';
-    note.textContent = 'Mostrando las ' + shown.length + ' mejores de ' + sorted.length
-      + (sortBy ? ' (ordenadas por ' + sortBy + ').' : '.');
+    note.textContent = 'Mostrando ' + shown.length + ' de ' + sorted.length
+      + (sortBy ? ', las de más ' + sortBy + '.' : '.');
     body.appendChild(note);
   }
   panel.appendChild(body);
@@ -1602,16 +1631,18 @@ function renderComparePanel(){
     const d = (b.stats[k] || 0) - (a.stats[k] || 0);
     if (d !== 0) diffs[k] = d;
   });
-  // Mismo orden que la ficha y que las tarjetas, para poder leer las tres
-  // columnas en paralelo sin buscar cada stat.
-  const diffRows = flatOrderedStats(diffs).map(([stat, diff]) => ({ stat, diff }));
+  // Mismo agrupado y mismo orden que la ficha y que las tarjetas, para poder leer
+  // las tres columnas en paralelo sin ir buscando cada stat.
+  const grupos = groupedStats(diffs);
 
-  const diffHtml = diffRows.length
-    ? diffRows.map(r => {
-        const cls = r.diff > 0 ? 'positive' : 'negative';
-        const sign = r.diff > 0 ? '+' : '';
-        return `<div class="drow">${statIconSmall(r.stat) || '<span style="width:16px"></span>'}<span class="nm">${r.stat}</span><span class="dval ${cls}">${sign}${Math.round(r.diff * 100) / 100}</span></div>`;
-      }).join('')
+  const diffHtml = grupos.length
+    ? grupos.map(g => `<div class="gh">${g.title}</div>`
+        + g.rows.map(([stat, diff]) => {
+            const cls = diff > 0 ? 'positive' : 'negative';
+            const sign = diff > 0 ? '+' : '';
+            return `<div class="drow">${statIconSmall(stat) || '<span style="width:16px"></span>'}<span class="nm">${stat}</span><span class="dval ${cls}">${sign}${Math.round(diff * 100) / 100}</span></div>`;
+          }).join('')
+      ).join('')
     : '<div class="hint" style="text-align:center;padding:.5rem 0">Stats idénticos.</div>';
 
   const panel = document.createElement('div');
