@@ -95,16 +95,42 @@ el detalle completo, con los datos verificados y las decisiones tomadas, está e
   es para duelos cortos, no para optimizar un build entero.
 - GitHub Pages activado: https://jaumander.github.io/wakfu-gear-compare/
 
+## EN CURSO: Dominio elemental limitado por nº de elementos de la build
+
+**Motivación:** un objeto que da dominio a los 4 elementos infla el total si la build solo
+usa 2 o 3 (la mayoría de clases usan 2-3 elementos), como el "Nb éléments" de Stratfu.
+
+**Alcance — qué toca:**
+- Selector en la ficha (2 / 3 / 4 elementos) junto al conmutador Personaje/Aptitudes.
+- El cálculo de "Dominio elemental total": por objeto, `multiplicador_usado =
+  min(elementos_del_objeto, elementos_de_la_build)`. Si el objeto da a más elementos de
+  los que la build usa, se cala el multiplicador y se muestra un aviso (icono + tooltip)
+  explicando por qué.
+
+**Qué NO toca:**
+- Resistencia elemental sigue igual (siempre ×4 aprovechado, sin tope, según ya se decidió).
+- No cambia el motor de combinatoria (`compare()`/`isValidCombo` en compare.py) ni nada de
+  terminal — solo el cálculo/visual del dominio en `index.html`.
+
+**Milestones:**
+1/2 — HECHO: selector 2/3/4 en la ficha (junto al conmutador de modo) + estado
+      `buildElementCount` guardado. Por defecto 4 = mismo comportamiento que antes, así que
+      no cambia nada todavía (validado: la web sigue calculando igual que antes de este
+      milestone).
+2/2 — Pendiente: `foldElementalStats()` usa `buildElementCount` para capar el multiplicador
+      del dominio (no de la resistencia) + icono de aviso con tooltip cuando un objeto se
+      cala. También debería aplicarse al desglose por objeto (`dominioPorItem()`).
+
 ## Pendiente / decisiones abiertas
-- **Selector de "elementos que usa mi build" (2/3/4)**: un objeto que da dominio a los 4
-  elementos infla un total que la mayoría de builds no aprovecha (casi todas las clases
-  juegan 2-3 elementos). Propuesto al usuario recalcular el total contando solo los
-  elementos elegidos, como el "Nb éléments" de Stratfu. Pendiente de que lo pida.
 - **"Poids" de Stratfu**: métrica de valor global de un objeto. No se sabe cómo la calculan
   y el propio usuario duda de su utilidad. Aplazado.
-- Confirmar la tabla completa de valores de `rareza` (se han visto 1-4 en items de nivel
-  bajo; falta mapear qué número corresponde a legendario/mítico/recuerdo, para poder
-  filtrar por rareza además de por reliquia/épico).
+- Tabla de `rareza` con nombres ya en la web (`RARITY_NAMES` en index.html): 0 Común,
+  1 Poco Común, 2 Raro, 3 Mítico, 4 Legendario, 5 Reliquia, 6 Recuerdo, 7 Épico.
+  **5 y 7 están confirmados** contra el dataset real (coinciden al 100% con los flags
+  es_reliquia/es_epico). El resto (0,1,2,3,4,6) sigue el orden oficial de la wiki de
+  Wakfu + el conteo real de objetos por valor, pero no está verificado objeto a objeto
+  contra el juego — si el usuario ve algún color/nombre que no cuadra, avisar para
+  corregirlo.
 - Nombres de estadística sin unificar del todo: "PdV" y "Punto de vida" son la misma stat
   (Vida) pero Ankama los describe con dos textos distintos en su JSON; de momento quedan
   como dos claves separadas. También queda un cajón "Stat desconocida" (otras descripciones

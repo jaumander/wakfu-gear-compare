@@ -229,7 +229,8 @@
     background:rgba(255,255,255,.04);border-radius:4px;padding:0 .3rem;flex:none;
   }
 
-  .mode-toggle{display:flex;gap:.25rem;padding:.55rem .95rem;border-bottom:1px solid var(--border-soft);}
+  .mode-toggle{display:flex;gap:.25rem;padding:.55rem .95rem;border-bottom:1px solid var(--border-soft);align-items:center;}
+  .build-elem-label{font-size:.78rem;color:var(--text-dim);padding:0 .2rem;}
   .mode-toggle button{
     flex:1;font-size:.74rem;padding:.3rem .4rem;border-radius:7px;
     text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);
@@ -629,6 +630,13 @@
         <button data-mode="juego" class="on" title="Como la ficha de personaje del juego">Personaje</button>
         <button data-mode="aptitudes" title="Como el reparto de puntos de característica">Aptitudes</button>
       </div>
+      <div class="mode-toggle" id="build-elem-toggle" title="Cuantos elementos usa tu build: limita el dominio elemental que de verdad aprovechas">
+        <span class="build-elem-label">Mi build usa</span>
+        <button data-elems="2">2</button>
+        <button data-elems="3">3</button>
+        <button data-elems="4" class="on">4</button>
+        <span class="build-elem-label">elementos</span>
+      </div>
       <div id="sheet-body">
         <div class="sheet-empty">
           Añade candidatos a los slots y pulsa<br><strong>Calcular combinaciones</strong>.<br>
@@ -761,16 +769,26 @@ const GEAR_SLOTS = [
 GEAR_SLOTS.forEach(s => candidatesBySlot[s.key] = []);
 
 /* Colores de rareza MEDIDOS pixel a pixel sobre rarities/0..7.png de wakassets
-   (no inventados). El NOMBRE de cada rareza sigue sin confirmarse -> no se
-   muestra ninguna etiqueta, solo la gema y el color del marco. */
+   (no inventados).
+   Nombres: 5=Reliquia y 7=Épico están CONFIRMADOS contra el dataset real (todos
+   los objetos con es_reliquia/es_epico usan exactamente esos números). El resto
+   (0,1,2,3,4,6) sigue la lista oficial de la wiki de Wakfu (Común < Poco Común <
+   Raro < Mítico < Legendario < Recuerdo < Reliquia < Épico, 8 rarezas en total) y
+   el conteo real por valor encaja con ese orden, pero NO están verificados objeto
+   a objeto contra el juego -> si ves alguno mal, avisa y se corrige. */
+const RARITY_NAMES = {
+  0:'Común', 1:'Poco Común', 2:'Raro', 3:'Mítico',
+  4:'Legendario', 5:'Reliquia', 6:'Recuerdo', 7:'Épico'
+};
 const RARITY_COLOR = {
   0:'#939393', 1:'#d1d1d1', 2:'#04d376', 3:'#f57a21',
   4:'#f1c13a', 5:'#f659d4', 6:'#77b7d8', 7:'#e570a2'
 };
 function rarityColor(r){ return RARITY_COLOR[r] || '#39415a'; }
+function rarityName(r){ return RARITY_NAMES[r] || `rareza ${r}`; }
 function rarityGem(r){
   if (r === null || r === undefined || !(r in RARITY_COLOR)) return '';
-  return `<img class="gem" src="${ASSETS}/rarities/${r}.png" alt="" title="rareza ${r}">`;
+  return `<img class="gem" src="${ASSETS}/rarities/${r}.png" alt="" title="${rarityName(r)}">`;
 }
 
 /* Icono real del objeto: wakassets sirve items/{gfxId}.png (verificado, carga).
@@ -958,6 +976,11 @@ const MODES = {
   }
 };
 let sheetMode = 'juego';
+/* Milestone 1/2 (dominio elemental limitado por build): de momento solo se
+   guarda la elección del usuario. El milestone 2/2 hará que foldElementalStats()
+   use este valor para capar el multiplicador y mostrar el aviso. Por defecto 4
+   = comportamiento actual (sin cambios) para no romper nada mientras tanto. */
+let buildElementCount = 4;
 let openBlocks = {};
 
 /* Agrupa y ordena un conjunto de stats segun el modo activo de la ficha.
@@ -1703,6 +1726,15 @@ document.getElementById('mode-toggle').onclick = (e) => {
   document.querySelectorAll('#mode-toggle button').forEach(b => b.classList.toggle('on', b === btn));
   renderSheet();
   if (lastResults.length) renderResults();
+};
+
+document.getElementById('build-elem-toggle').onclick = (e) => {
+  const btn = e.target.closest('button[data-elems]');
+  if (!btn) return;
+  buildElementCount = parseInt(btn.dataset.elems, 10);
+  document.querySelectorAll('#build-elem-toggle button').forEach(b => b.classList.toggle('on', b === btn));
+  // Milestone 2/2 hará que esto recalcule el dominio elemental con el tope.
+  // Por ahora no cambia nada más allá de guardar la elección.
 };
 
 /* =========================================================================
