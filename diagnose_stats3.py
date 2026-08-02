@@ -36,7 +36,7 @@ raw_by_id = {e["definition"]["id"]: e.get("description", {}) for e in actions}
 
 # actionIds que YA tienen un caso especial resuelto en build_dataset.py; los
 # saltamos aqui porque sabemos que su nombre final no depende de action_map.
-ALREADY_FIXED = set(bd.ELEMENTAL_N_ACTION_IDS) | set(bd.ELEMENTAL_ALL_ACTION_IDS) | set(bd.ARMOR_ACTION_IDS)
+ALREADY_FIXED = set(bd.ELEMENTAL_N_ACTION_IDS) | set(bd.ELEMENTAL_ALL_ACTION_IDS) | set(bd.ARMOR_ACTION_IDS) | set(bd.UNIQUE_PASSIVE_ACTION_IDS)
 
 problematic = Counter()
 examples = {}

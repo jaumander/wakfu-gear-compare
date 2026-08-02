@@ -66,6 +66,13 @@ ELEMENTAL_ALL_ACTION_IDS = {80: "Resistencia elemental (todos)", 120: "Dominio e
 ARMOR_ACTION_IDS = (39, 40)
 ARMOR_PARAM4_LABELS = {120: "Armadura dada", 121: "Armadura recibida"}
 
+# actionId 304: NO es un stat normal, es el efecto de una PASIVA ÚNICA de texto libre
+# (confirmado por el usuario viendo los objetos reales que lo usan: son objetos con
+# habilidades especiales redactadas a mano, no una característica sumable). El número
+# de params[0] no representa un valor de stat comparable, así que en vez de intentar
+# nombrarlo como stat se marca aparte para no confundir con "Stat desconocida".
+UNIQUE_PASSIVE_ACTION_IDS = {304: "Pasiva única (ver descripción del objeto)"}
+
 
 def fetch_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": "wakfu-gear-compare/1.0"})
@@ -192,6 +199,9 @@ def build_reduced_items(items, slot_map, action_map):
                     stat_name = f"accion_{action_id}"
                 if action_id == 40:
                     value = -value
+            elif action_id in UNIQUE_PASSIVE_ACTION_IDS:
+                stat_name = UNIQUE_PASSIVE_ACTION_IDS[action_id]
+                value = 1  # solo marca "tiene una pasiva única"; el número crudo no es un stat sumable
             else:
                 stat_name = action_map.get(action_id, f"accion_{action_id}")
             stats[stat_name] = stats.get(stat_name, 0) + value
