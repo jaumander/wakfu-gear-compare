@@ -175,8 +175,39 @@
   .srow .v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.82rem;color:var(--text);}
   .srow.clickable{cursor:pointer;}
   .srow.clickable:hover{background:rgba(241,193,58,.10);}
-  .srow.clickable .nm::after{content:' ⓘ';color:var(--text-dim);font-size:.72rem;}
   .sheet-empty{padding:1.6rem .95rem;text-align:center;color:var(--text-dim);font-size:.82rem;}
+
+  /* la ficha acompaña al scroll: debajo no hay nada más en esa columna */
+  .sheet-wrap{position:sticky;top:74px;max-height:calc(100vh - 90px);overflow-y:auto;}
+
+  /* desglose elemental desplegado en la propia ficha (antes era un modal) */
+  details.srow-d{margin:0;}
+  details.srow-d > summary{list-style:none;cursor:pointer;}
+  details.srow-d > summary::-webkit-details-marker{display:none;}
+  details.srow-d > summary{display:flex;align-items:center;gap:.5rem;padding:.25rem .4rem;border-radius:6px;font-size:.82rem;}
+  details.srow-d > summary:hover{background:rgba(241,193,58,.10);}
+  details.srow-d > summary .nm{
+    flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c3c9db;
+  }
+  details.srow-d > summary .v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.82rem;}
+  details.srow-d > summary .nm::after{content:' ▸';color:var(--text-dim);font-size:.7rem;}
+  details.srow-d[open] > summary .nm::after{content:' ▾';color:var(--gold);}
+  details.srow-d .sub{
+    margin:.1rem 0 .35rem 1.55rem;padding-left:.55rem;
+    border-left:1px solid var(--border);
+  }
+  details.srow-d .sub .srow{font-size:.76rem;background:none;}
+  details.srow-d .sub .srow .nm{color:var(--text-muted);}
+  details.srow-d .sub .srow .v{color:var(--text-muted);font-weight:600;}
+
+  .mode-toggle{display:flex;gap:.25rem;padding:.55rem .95rem;border-bottom:1px solid var(--border-soft);}
+  .mode-toggle button{
+    flex:1;font-size:.74rem;padding:.3rem .4rem;border-radius:7px;
+    text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);
+  }
+  .mode-toggle button.on{
+    background:rgba(241,193,58,.13);border-color:rgba(241,193,58,.45);color:var(--gold);font-weight:600;
+  }
 
   /* ---------- ficha de 12 slots ---------- */
   .gear-grid{
@@ -413,7 +444,7 @@
 <div class="layout">
 
   <!-- ============ COLUMNA IZQUIERDA: FICHA DE STATS ============ -->
-  <div>
+  <div class="sheet-wrap">
     <div class="panel">
       <div class="sheet-hero">
         <div>
@@ -424,6 +455,10 @@
           <span class="pill" id="pill-pieces">0 piezas</span>
           <span class="pill" id="pill-lvl">nvl —</span>
         </div>
+      </div>
+      <div class="mode-toggle" id="mode-toggle">
+        <button data-mode="juego" class="on" title="Como la ficha de personaje del juego">Personaje</button>
+        <button data-mode="aptitudes" title="Como el reparto de puntos de característica">Aptitudes</button>
       </div>
       <div id="sheet-body">
         <div class="sheet-empty">
@@ -495,15 +530,7 @@
   (imágenes © Ankama, cedidas para proyectos comunitarios sin ánimo de lucro).
 </footer>
 
-<div class="modal-backdrop" id="breakdown-modal-backdrop" onclick="if(event.target===this) closeBreakdown()">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="breakdown-modal-title">Desglose</h3>
-      <button class="ghost" onclick="closeBreakdown()">Cerrar</button>
-    </div>
-    <div id="breakdown-modal-list"></div>
-  </div>
-</div>
+<div class="modal-backdrop" id="breakdown-modal-backdrop" hidden></div>
 
 <script>
 /* =========================================================================
@@ -660,17 +687,71 @@ function statIconSmall(name){
   return p ? `<img src="${ASSETS}/${p}.png" alt="" loading="lazy">` : '';
 }
 
-/* Bloques de la ficha (orden y agrupación como en el juego). El último bloque
-   recoge cualquier stat que no encaje, para no perder nada nunca. */
-const SHEET_BLOCKS = [
-  { title:'Principales', match:n => ['pa','pm','pw','pdv','vida','punto de vida','vitalidad','alcance','control','sabiduría','prospección','voluntad','iniciativa'].includes(n)
-      || n.startsWith('pa má') || n.startsWith('pm má') || n.startsWith('pw má') },
-  { title:'Elemental',   match:n => n.includes('elemental') || /dominio de (agua|aire|fuego|tierra|luz)/.test(n) || /resistencia (al|a la) /.test(n) },
-  { title:'Ataque',      match:n => n.includes('dominio') || n.includes('daño') || n.includes('daños') || n.includes('crítico') || n.includes('curación') },
-  { title:'Defensa',     match:n => n.includes('resistencia') || n.includes('armadura') || n.includes('barrera') || n.includes('esquiva') || n.includes('placaje') || n.includes('anticipa') || n.includes('parada') || n.includes('bloqueo') },
-  { title:'Otros',       match:() => true },
-];
-let openBlocks = { 'Principales':true, 'Elemental':true, 'Ataque':true, 'Defensa':true, 'Otros':false };
+/* Agrupaciones de la ficha. Dos modos, calcados de cómo lo hace el propio juego:
+
+   - "Personaje": la ventana de Personaje de Wakfu -> cabecera (PdV/PA/PM/PW),
+     "Dominios y resistencias", "Combate" y "Secundario".
+   - "Aptitudes": el reparto de puntos de característica -> Inteligencia, Fuerza,
+     Agilidad, Suerte y Mayor.
+
+   `orden` es el orden EXACTO en que el juego lista cada stat dentro del bloque; lo
+   que no esté en la lista se ordena por magnitud al final. El bloque "Otros" es el
+   cajón de sastre, para que nunca se pierda un stat que Ankama añada o renombre. */
+const has = (n, ...frags) => frags.some(f => n.includes(f));
+
+const MODES = {
+  juego: {
+    label:'Personaje',
+    blocks:[
+      { title:'Principales', orden:['pdv','punto de vida','vida','pa','pm','pw'],
+        match:n => ['pdv','punto de vida','vida','vitalidad','pa','pm','pw'].includes(n)
+                || /^p[amw] má/.test(n) },
+      { title:'Dominios y resistencias', orden:['dominio elemental total','resistencia elemental total'],
+        match:n => has(n,'elemental') || /dominio de (agua|aire|fuego|tierra|luz)/.test(n)
+                || /resistencia (al|a la) /.test(n) },
+      { title:'Combate',
+        orden:['daños infligidos','curación realizada','golpe crítico','anticipación',
+               'iniciativa','alcance','esquiva','placaje','sabiduría','prospección','voluntad','control'],
+        match:n => has(n,'daños infligidos','daño infligido','curación','golpe crítico','anticipa',
+                       'parada','bloqueo','iniciativa','alcance','esquiva','placaje','sabiduría',
+                       'prospección','voluntad','control') },
+      { title:'Secundario',
+        orden:['dominio crítico','resistencia crítica','dominio espalda','resistencia espalda',
+               'dominio de melé','armadura dada','dominio a distancia','armadura recibida',
+               'dominio cura','daños indirectos','dominio berserker'],
+        match:n => has(n,'dominio','resistencia','armadura','daños indirectos','daño indirecto','barrera') },
+      { title:'Otros', match:() => true },
+    ]
+  },
+  aptitudes: {
+    label:'Aptitudes',
+    blocks:[
+      { title:'Inteligencia', orden:['pdv','resistencia elemental total','barrera'],
+        match:n => n === 'pdv' || n === 'punto de vida' || n === 'vida' || n === 'vitalidad'
+                || has(n,'resistencia elemental','barrera','parapeto','armadura recibida')
+                || /resistencia (al|a la) /.test(n) },
+      { title:'Fuerza', orden:['dominio elemental total','dominio de melé','dominio a distancia'],
+        match:n => has(n,'dominio elemental') || has(n,'dominio de melé','dominio a distancia','dominio distancia')
+                || /dominio de (agua|aire|fuego|tierra|luz)/.test(n) },
+      { title:'Agilidad', orden:['placaje','esquiva','iniciativa','voluntad'],
+        match:n => has(n,'placaje','esquiva','iniciativa','voluntad') },
+      { title:'Suerte',
+        orden:['golpe crítico','anticipación','dominio crítico','dominio espalda',
+               'dominio berserker','dominio cura','resistencia espalda','resistencia crítica'],
+        match:n => has(n,'crítico','critica','crítica','anticipa','parada','bloqueo','espalda',
+                       'berserk','cura') },
+      { title:'Mayor',
+        orden:['pa','pm','alcance','pw','armadura dada','daños infligidos',
+               'curación realizada','daños indirectos'],
+        match:n => ['pa','pm','pw'].includes(n) || /^p[amw] má/.test(n)
+                || has(n,'alcance','armadura','daños infligidos','daño infligido','curación',
+                       'daños indirectos','daño indirecto','control','sabiduría','prospección') },
+      { title:'Otros', match:() => true },
+    ]
+  }
+};
+let sheetMode = 'juego';
+let openBlocks = {};
 
 /* =========================================================================
    CARGA
@@ -1006,32 +1087,24 @@ function cartesian(arrays){
 }
 
 /* =========================================================================
-   DESGLOSE (modal)
+   DESGLOSE
+   Los totales elementales se despliegan EN SU SITIO (dentro de la propia ficha /
+   tarjeta), no en un modal aparte: así se ve el total y de qué se compone sin
+   perder de vista el resto de la combinación.
    ========================================================================= */
-let breakdownRegistry = [];
-
-function openBreakdown(idx){
-  const data = breakdownRegistry[idx];
-  if (!data) return;
-  document.getElementById('breakdown-modal-title').textContent = data.title;
-  const list = document.getElementById('breakdown-modal-list');
-  list.innerHTML = data.entries
-    .filter(e => e.value !== 0)
-    .sort((a,b) => b.value - a.value)
-    .map(e => `<div class="srow">${statIcon(e.stat)}<span class="nm">${e.stat}</span><span class="v">${Math.round(e.value*100)/100}</span></div>`)
-    .join('') || '<div class="hint">Sin componentes.</div>';
-  document.getElementById('breakdown-modal-backdrop').style.display = 'flex';
-}
-function closeBreakdown(){
-  document.getElementById('breakdown-modal-backdrop').style.display = 'none';
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBreakdown(); });
-
 function statRowHtml(k, v, r){
   const rounded = Math.round(v*100)/100;
-  if (ELEMENTAL_TOTAL_KEYS.includes(k) && r && r.breakdown && r.breakdown[k] && r.breakdown[k].length){
-    const idx = breakdownRegistry.push({ title: k, entries: r.breakdown[k] }) - 1;
-    return `<div class="srow clickable" onclick="openBreakdown(${idx})">${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></div>`;
+  const parts = (ELEMENTAL_TOTAL_KEYS.includes(k) && r && r.breakdown && r.breakdown[k]) ? r.breakdown[k] : null;
+  if (parts && parts.length){
+    const sub = parts
+      .filter(e => e.value !== 0)
+      .sort((a,b) => b.value - a.value)
+      .map(e => `<div class="srow">${statIcon(e.stat)}<span class="nm">${e.stat}</span><span class="v">${Math.round(e.value*100)/100}</span></div>`)
+      .join('');
+    return `<details class="srow-d">
+      <summary>${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></summary>
+      <div class="sub">${sub}</div>
+    </details>`;
   }
   return `<div class="srow">${statIcon(k)}<span class="nm">${k}</span><span class="v">${rounded}</span></div>`;
 }
@@ -1066,14 +1139,23 @@ function renderSheet(){
   const entries = Object.entries(r.stats).filter(([,v]) => v !== 0);
   const used = new Set();
   let html = '';
-  SHEET_BLOCKS.forEach(block => {
+  MODES[sheetMode].blocks.forEach(block => {
     const rows = entries.filter(([k]) => {
       if (used.has(k)) return false;
       if (!block.match(k.toLowerCase())) return false;
       used.add(k); return true;
-    }).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+    });
     if (!rows.length) return;
-    html += `<details class="statblock"${openBlocks[block.title] ? ' open' : ''} data-block="${block.title}">
+    const orden = block.orden || [];
+    const rank = k => {
+      const n = k.toLowerCase();
+      const i = orden.findIndex(o => n === o || n.startsWith(o));
+      return i === -1 ? 999 : i;
+    };
+    rows.sort((a,b) => (rank(a[0]) - rank(b[0])) || (Math.abs(b[1]) - Math.abs(a[1])));
+    const key = sheetMode + ':' + block.title;
+    const open = openBlocks[key] !== undefined ? openBlocks[key] : block.title !== 'Otros';
+    html += `<details class="statblock"${open ? ' open' : ''} data-block="${key}">
       <summary><span class="bar"></span>${block.title}<span class="chev">▶</span></summary>
       <div class="rows">${rows.map(([k,v]) => statRowHtml(k, v, r)).join('')}</div>
     </details>`;
@@ -1083,6 +1165,14 @@ function renderSheet(){
     d.addEventListener('toggle', () => { openBlocks[d.dataset.block] = d.open; });
   });
 }
+
+document.getElementById('mode-toggle').onclick = (e) => {
+  const btn = e.target.closest('button[data-mode]');
+  if (!btn) return;
+  sheetMode = btn.dataset.mode;
+  document.querySelectorAll('#mode-toggle button').forEach(b => b.classList.toggle('on', b === btn));
+  renderSheet();
+};
 
 /* =========================================================================
    CÁLCULO Y RESULTADOS
@@ -1122,7 +1212,6 @@ function comboPiecesHtml(r){
 }
 
 function renderResults(){
-  breakdownRegistry = [];
   if (lastResults.length === 0){
     resultsPanel.innerHTML = '<div class="panel"><div class="panel-body"><div class="empty-state">No hay combinaciones (o todas violan la regla de 1 reliquia / 1 épico).</div></div></div>';
     renderSheet();
@@ -1226,6 +1315,7 @@ function renderComparePanel(){
     <div class="panel-head">
       <h2>Comparador A / B</h2>
       <span class="count">diferencia B − A</span>
+      <button class="ghost" id="swap-ab" title="Intercambiar A y B">⇄ Invertir A/B</button>
     </div>
     <div class="panel-body">
       <div class="cmp-grid">
@@ -1237,6 +1327,7 @@ function renderComparePanel(){
         ${colHtml(b,'b')}
       </div>
     </div>`;
+  panel.querySelector('#swap-ab').onclick = () => { compareSelection.reverse(); renderResults(); };
   return panel;
 }
 </script>
