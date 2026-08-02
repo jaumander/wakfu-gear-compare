@@ -141,24 +141,38 @@
     background:var(--surface);
     border:1px solid var(--ok);
     border-radius:10px;
-    padding:1rem 1.25rem;
+    padding:1.1rem 1.25rem 1.25rem;
     margin-bottom:1.25rem;
   }
   .compare-panel h3{
-    font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:500;margin:0 0 .7rem;
+    font-family:'Space Grotesk',sans-serif;font-size:1.05rem;font-weight:700;margin:0 0 .9rem;
   }
-  .compare-labels{font-size:.85rem;color:var(--text-muted);margin-bottom:.9rem;display:flex;flex-direction:column;gap:.2rem;}
-  .compare-labels strong{color:var(--text);}
-  .compare-header-row, .compare-row{
-    display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:.5rem;
-    font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);
+  .compare-card{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:.8rem 1rem;
+    margin-bottom:.4rem;
   }
-  .compare-header-row{color:var(--text-muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;}
-  .compare-val{font-family:'JetBrains Mono',monospace;color:var(--text-muted);}
-  .compare-diff{font-family:'JetBrains Mono',monospace;font-weight:600;}
-  .compare-diff.positive{color:var(--ok);}
-  .compare-diff.negative{color:var(--danger);}
-  .compare-diff.neutral{color:var(--text-muted);}
+  .compare-card.compare-a{border-left:4px solid var(--epico);}
+  .compare-card.compare-b{border-left:4px solid var(--ok);}
+  .compare-card-label{
+    font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;
+    color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;
+  }
+  .compare-arrow{text-align:center;color:var(--text-muted);font-size:1.2rem;margin:.15rem 0 .5rem;}
+  .compare-diff-section{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);}
+  .compare-diff-title{
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.92rem;margin-bottom:.6rem;
+  }
+  .diff-row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:.88rem;padding:.4rem 0;border-bottom:1px solid var(--border);
+  }
+  .diff-row:last-child{border-bottom:none;}
+  .diff-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.9rem;}
+  .diff-val.positive{color:var(--ok);}
+  .diff-val.negative{color:var(--danger);}
   .combo-items{font-size:.85rem;color:var(--text);margin-bottom:.6rem;}
   .combo-items .slot-name{color:var(--text-muted);}
   .stats-grid{
@@ -529,39 +543,51 @@ function renderComparePanel(){
   if (compareSelection.length !== 2) return null;
   const [a, b] = compareSelection;
 
-  const statKeys = new Set([...Object.keys(a.stats), ...Object.keys(b.stats)]);
-  const rows = [...statKeys].map(k => {
-    const va = a.stats[k] || 0;
-    const vb = b.stats[k] || 0;
-    return { stat: k, va, vb, diff: vb - va };
-  }).sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
-
-  const describe = (r) => r.labels.map((label, idx) => r.items[idx].nombre).join(' + ');
-
-  const rowsHtml = rows.map(r => {
-    const cls = r.diff > 0 ? 'positive' : r.diff < 0 ? 'negative' : 'neutral';
-    const sign = r.diff > 0 ? '+' : '';
-    return `
-      <div class="compare-row">
-        <span>${r.stat}</span>
-        <span class="compare-val">${Math.round(r.va * 100) / 100}</span>
-        <span class="compare-val">${Math.round(r.vb * 100) / 100}</span>
-        <span class="compare-diff ${cls}">${sign}${Math.round(r.diff * 100) / 100}</span>
-      </div>`;
+  const buildItemsHtml = (r) => r.labels.map((label, idx) => {
+    const it = r.items[idx];
+    const tag = it.es_reliquia ? '<span class="tag reliquia">Reliquia</span>'
+              : it.es_epico ? '<span class="tag epico">Épico</span>' : '';
+    return `<div><span class="slot-name">${label}:</span> ${it.nombre} ${tag}</div>`;
   }).join('');
+
+  const buildStatsHtml = (r) => Object.entries(r.stats)
+    .sort((x, y) => y[1] - x[1])
+    .map(([k, v]) => `<div class="stat"><span>${k}</span><span class="v">${Math.round(v * 100) / 100}</span></div>`)
+    .join('');
+
+  const statKeys = new Set([...Object.keys(a.stats), ...Object.keys(b.stats)]);
+  const diffRows = [...statKeys]
+    .map(k => ({ stat: k, diff: (b.stats[k] || 0) - (a.stats[k] || 0) }))
+    .filter(r => r.diff !== 0)
+    .sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
+
+  const diffHtml = diffRows.length
+    ? diffRows.map(r => {
+        const cls = r.diff > 0 ? 'positive' : 'negative';
+        const sign = r.diff > 0 ? '+' : '';
+        return `<div class="diff-row"><span>${r.stat}</span><span class="diff-val ${cls}">${sign}${Math.round(r.diff * 100) / 100}</span></div>`;
+      }).join('')
+    : '<div class="diff-row"><span>Ambas combinaciones dan exactamente los mismos stats.</span></div>';
 
   const panel = document.createElement('div');
   panel.className = 'compare-panel';
   panel.innerHTML = `
-    <h3>Comparación (B − A)</h3>
-    <div class="compare-labels">
-      <div><strong>A:</strong> ${describe(a)}</div>
-      <div><strong>B:</strong> ${describe(b)}</div>
+    <h3>Comparador</h3>
+    <div class="compare-card compare-a">
+      <div class="compare-card-label">Combinación A</div>
+      <div class="combo-items">${buildItemsHtml(a)}</div>
+      <div class="stats-grid">${buildStatsHtml(a)}</div>
     </div>
-    <div class="compare-header-row">
-      <span>Stat</span><span>A</span><span>B</span><span>Diferencia</span>
+    <div class="compare-arrow">↓</div>
+    <div class="compare-card compare-b">
+      <div class="compare-card-label">Combinación B</div>
+      <div class="combo-items">${buildItemsHtml(b)}</div>
+      <div class="stats-grid">${buildStatsHtml(b)}</div>
     </div>
-    ${rowsHtml}
+    <div class="compare-diff-section">
+      <div class="compare-diff-title">Diferencia (B − A)</div>
+      ${diffHtml}
+    </div>
   `;
   return panel;
 }
