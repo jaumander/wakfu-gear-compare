@@ -202,6 +202,12 @@
   }
   details.srow-d .sub .srow{font-size:.76rem;background:none;}
   details.srow-d .sub .srow .nm{color:var(--text-muted);}
+  /* El nombre nunca puede colapsar a cero: en la rejilla estrecha de las tarjetas
+     el chip «x2» se lo comia entero y solo quedaba una letra suelta. */
+  details.srow-d .sub .srow .nm{min-width:3.2rem;}
+  /* En la rejilla compacta (tarjetas y comparador) no cabe el chip: se deja solo
+     lo que aporta la linea, y el calculo va en el title. */
+  .stats-grid details.srow-d .sub .mult{display:none;}
   details.srow-d .sub .srow .v{color:var(--text-muted);font-weight:600;}
   details.srow-d .sub .mult{
     font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);
@@ -1424,7 +1430,10 @@ function statRowHtml(k, v, r){
         const x = e.mult > 1
           ? `<span class="mult">${Math.round(e.value*100)/100} ×${e.mult}</span>`
           : '';
-        return `<div class="srow">${statIcon(e.stat)}<span class="nm">${e.stat}</span>${x}<span class="v">${Math.round(e.aporta*100)/100}</span></div>`;
+        const t = e.mult > 1
+          ? ` title="${e.stat}: ${Math.round(e.value*100)/100} × ${e.mult} elementos = ${Math.round(e.aporta*100)/100}"`
+          : '';
+        return `<div class="srow"${t}>${statIcon(e.stat)}<span class="nm">${e.stat}</span>${x}<span class="v">${Math.round(e.aporta*100)/100}</span></div>`;
       })
       .join('');
     return `<details class="srow-d" open>
