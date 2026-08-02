@@ -26,20 +26,27 @@
 - Pendiente de que el usuario diga el nombre exacto de un arma de dos manos que buscó y no
   le apareció, para rastrearla paso a paso en el JSON crudo en vez de seguir adivinando.
 
-## Pendiente: stat "armadura dada" (y posibles casos similares) cae en "Stat desconocida"
-- El usuario encontró con capturas de pantalla que "Varita de mago gris" (nvl 245) da
-  "5% de armadura dada" en el juego, pero en la web ese valor (+5) sale como "Stat
-  desconocida" — su actionId debe tener una descripción rota en el JSON de Ankama, como ya
-  pasó antes con el dominio/resistencia elemental.
-- Se subió `diagnose_stats.py` (raíz del repo) que: 1) busca ese objeto exacto y muestra el
-  actionId/descripción cruda detrás de cada efecto, y 2) barre TODOS los actionIds usados
-  en items reales para encontrar de una vez cualquier otro caso que caiga en "Stat
-  desconocida". **Pendiente de que el usuario lo ejecute** (`git pull && python
-  diagnose_stats.py` — ya tiene el repo clonado y `data/` cacheado en su máquina Windows)
-  **y pegue la salida en el chat.** Con esa salida, el siguiente Claude debe: identificar
-  el actionId real detrás de "armadura dada", arreglar `clean_stat_label()` o añadir un
-  caso especial en `build_dataset.py` (como se hizo con el dominio/resistencia elemental),
-  y pedir al usuario que regenere y suba `items_reduced.json`.
+## RESUELTO: stat "armadura dada"/"armadura recibida" ya no cae en "Stat desconocida"
+- Causa: `actionId` 39 (y 40, su versión en negativo) usan una plantilla de texto en
+  `actions.json` que no sirve ("[#1]{...%} [#3]"): el nombre real no está en el texto, va
+  codificado en `params[4]` (120 = armadura dada, 121 = armadura recibida). **Importante:**
+  un intento inicial de resolver esto asumiendo que `params[4]` era "el actionId de otro
+  stat" (120 → "Dominio elemental") fue un ERROR — esos números coinciden por casualidad
+  con actionIds reales que significan otra cosa. Se descartó y se confirmó el significado
+  correcto pegando 2 capturas reales del juego (Varita de mago gris = armadura dada 5%,
+  Botas rompehielos = armadura recibida 5%).
+- Arreglado en `build_dataset.py` (`ARMOR_PARAM4_LABELS` + rama nueva en
+  `build_reduced_items`), validado con un dataset sintético que reproduce ambos casos
+  reales más un caso de actionId 40 (debe salir en negativo). Los 3 casos de prueba dieron
+  el resultado esperado. Commit ya pusheado.
+- **Pendiente de que el usuario haga**: `git pull`, luego `python build_dataset.py`
+  (regenera `items_reduced.json` con datos reales, ya con este arreglo aplicado) y
+  `git add items_reduced.json && git commit && git push`. Solo entonces la web mostrará
+  bien estos ~216 objetos que antes caían en "Stat desconocida".
+- Nota menor: solo se han visto los valores 120/121 en `params[4]` en los datos reales
+  actuales (216 apariciones). Si tras regenerar aparecen "accion_39"/"accion_40" sin
+  resolver en algún objeto, es que hay un tercer valor de `params[4]` no visto todavía —
+  avisar para añadirlo a `ARMOR_PARAM4_LABELS`.
 
 ## Pendiente: rareza
 - 5=Reliquia y 7=Épico ya confirmados contra datos reales. El resto (0 Común, 1 Poco
