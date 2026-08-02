@@ -208,6 +208,24 @@
   /* En la rejilla compacta (tarjetas y comparador) no cabe el chip: se deja solo
      lo que aporta la linea, y el calculo va en el title. */
   .stats-grid details.srow-d .sub .mult{display:none;}
+
+  /* dominio elemental: reparto por objeto y total al final */
+  .dom-block{display:block;}
+  .stats-grid .dom-block{grid-column:1/-1;}
+  .srow.dom-src .dot{width:8px;height:8px;border-radius:2px;flex:none;margin:0 5px;}
+  .srow.dom-src .nm{color:var(--text-muted);min-width:3.2rem;}
+  .srow.dom-src .v{color:var(--text-muted);font-weight:600;}
+  .srow.dom-src .mult{
+    font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);
+    background:rgba(255,255,255,.04);border-radius:4px;padding:0 .3rem;flex:none;
+  }
+  .srow.dom-total{
+    border-top:1px solid var(--border-soft);margin-top:.15rem;padding-top:.3rem;background:none;
+  }
+  .srow.dom-total .mult.sum{
+    font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);flex:none;
+  }
+  .stats-grid .srow.dom-src .mult, .stats-grid .srow.dom-total .mult{display:none;}
   details.srow-d .sub .srow .v{color:var(--text-muted);font-weight:600;}
   details.srow-d .sub .mult{
     font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text-dim);
@@ -1353,6 +1371,38 @@ function sumStats(combo){
 const RESISTENCIA_ELEMENTO_KEYS = ['Resistencia al agua', 'Resistencia al aire', 'Resistencia al fuego', 'Resistencia a la tierra'];
 const DOMINIO_ELEMENTO_KEYS = ['Dominio de agua', 'Dominio de aire', 'Dominio de fuego', 'Dominio de tierra'];
 
+/* Cuantos elementos cubre una linea de dominio elemental. 0 = no es dominio
+   elemental. Misma deteccion que usa foldElementalStats (los multiplicadores
+   estan validados con datos reales), extraida aparte para poder calcular
+   tambien el reparto por objeto. */
+function domElemMult(k){
+  if (DOMINIO_ELEMENTO_KEYS.includes(k)) return 1;
+  if (k === 'Dominio elemental (todos)') return 4;
+  if (k === 'Dominio elemental') return 1;
+  const m = k.match(/^Dominio elemental \((\d+) elementos\)$/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+/* Reparto del dominio elemental POR OBJETO. Se muestra antes que el total
+   porque es el dato que de verdad se lee: un "x4" reparte en los 4 elementos y
+   la mayoria de builds solo usan 2 o 3, asi que conviene ver de donde sale cada
+   trozo (y con que multiplicador) antes que el numero agregado. */
+function dominioPorItem(combo, labels){
+  const out = [];
+  combo.forEach((it, i) => {
+    Object.entries(it.stats).forEach(([k, v]) => {
+      const mult = domElemMult(k);
+      if (mult && v !== 0){
+        out.push({
+          nombre: it.nombre, rareza: it.rareza, slot: (labels && labels[i]) || it.slot,
+          stat: k, value: v, mult, aporta: v * mult
+        });
+      }
+    });
+  });
+  return out.sort((a,b) => b.aporta - a.aporta);
+}
+
 function foldElementalStats(stats){
   const folded = {};
   const breakdown = { 'Resistencia elemental total': [], 'Dominio elemental total': [] };
@@ -1395,8 +1445,7 @@ function foldElementalStats(stats){
   if (resTotal > 0) folded['Resistencia elemental total'] = resTotal;
   if (domTotal > 0) folded['Dominio elemental total'] = domTotal;
 
-  return { stats: folded, breakdown };
-}
+  return { stats: folded, breakdown };}
 
 const ELEMENTAL_TOTAL_KEYS = ['Resistencia elemental total', 'Dominio elemental total'];
 
@@ -1416,6 +1465,29 @@ function cartesian(arrays){
    ========================================================================= */
 function statRowHtml(k, v, r){
   const rounded = Math.round(v*100)/100;
+
+  /* DOMINIO ELEMENTAL: al reves que el resto. Primero lo que aporta cada objeto
+     (con su multiplicador a la vista) y el total al final como suma, porque el
+     "x4" de un objeto que da a los 4 elementos infla un total que la mayoria de
+     builds no aprovecha entero — conviene ver el reparto antes que el agregado. */
+  if (k === 'Dominio elemental total' && r && r.domItems && r.domItems.length){
+    const filas = r.domItems.map(e => {
+      const val = Math.round(e.value*100)/100;
+      const ap = Math.round(e.aporta*100)/100;
+      return `<div class="srow dom-src" title="${e.slot} — ${e.stat}: ${val}${e.mult>1?' × '+e.mult+' elementos':''} = ${ap}">
+        <span class="dot" style="background:${rarityColor(e.rareza)}"></span>
+        <span class="nm">${e.nombre}</span>
+        <span class="mult">${val}${e.mult>1?' ×'+e.mult:''}</span>
+        <span class="v">${ap}</span>
+      </div>`;
+    }).join('');
+    const suma = r.domItems.map(e => Math.round(e.aporta*100)/100).join(' + ');
+    return `<div class="dom-block">${filas}
+      <div class="srow dom-total">${statIcon(k)}<span class="nm">${k}</span>
+        <span class="mult sum">${suma}</span><span class="v">${rounded}</span></div>
+    </div>`;
+  }
+
   const parts = (ELEMENTAL_TOTAL_KEYS.includes(k) && r && r.breakdown && r.breakdown[k]) ? r.breakdown[k] : null;
   if (parts && parts.length){
     // Cada linea muestra lo que REALMENTE aporta al total, no el valor en bruto:
@@ -1529,7 +1601,8 @@ document.getElementById('compare-btn').onclick = () => {
   const combos = cartesian(optionLists).filter(isValidCombo);
   lastResults = combos.map(combo => {
     const { stats, breakdown } = foldElementalStats(sumStats(combo));
-    return { labels: activeKeys, items: combo, stats, breakdown };
+    return { labels: activeKeys, items: combo, stats, breakdown,
+             domItems: dominioPorItem(combo, activeKeys) };
   });
   compareSelection = [];
   sheetSource = null;
