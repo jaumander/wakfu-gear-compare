@@ -142,6 +142,15 @@ def build_reduced_items(items, slot_map, action_map):
         is_relic = RELIC_PROPERTY_ID in props
         is_epic = EPIC_PROPERTY_ID in props
 
+        # Identificador GRAFICO del objeto. Confirmado contra el items.json real
+        # (version 1.92.1.59) el 2026-08-02: vive en
+        # definition.item.graphicParameters.gfxId, y NO coincide con el `id` del
+        # objeto (ej. id 2021 -> gfxId 1202021). Hay tambien un femaleGfxId, que
+        # en los objetos comprobados vale lo mismo; no lo guardamos porque la web
+        # no distingue genero.
+        # Es lo que necesita la web para pintar el icono real de cada objeto.
+        gfx_id = item_def.get("graphicParameters", {}).get("gfxId")
+
         stats = {}
         for eff in entry["definition"].get("equipEffects", []):
             definition = eff["effect"]["definition"]
@@ -167,6 +176,7 @@ def build_reduced_items(items, slot_map, action_map):
 
         reduced.append({
             "id": item_def["id"],
+            "gfx": gfx_id,
             "nombre": name,
             "slot": slot_label,
             "nivel": item_def["level"],
@@ -193,6 +203,12 @@ def main():
 
     print("Generando dataset reducido...")
     reduced = build_reduced_items(raw["items"], slot_map, action_map)
+
+    con_gfx = sum(1 for it in reduced if it.get("gfx"))
+    print(f"  objetos con gfx (icono): {con_gfx} / {len(reduced)}")
+    if con_gfx < len(reduced):
+        print("  aviso: algunos objetos no traen graphicParameters.gfxId;")
+        print("         la web les pondra un marco de rareza con la inicial.")
 
     OUTPUT_PATH.write_text(json.dumps(reduced, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Listo: {OUTPUT_PATH} ({len(reduced)} objetos equipables)")
