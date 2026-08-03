@@ -608,6 +608,29 @@
   .dval.positive{color:var(--ok);}
   .dval.negative{color:var(--danger);}
 
+  /* desglose por elemento, desplegable, dentro de la propia diferencia */
+  details.drow-d{margin:0;}
+  details.drow-d > summary{
+    list-style:none;cursor:pointer;display:flex;align-items:center;gap:.4rem;
+    padding:.22rem .35rem;border-radius:6px;font-size:.78rem;
+  }
+  details.drow-d > summary::-webkit-details-marker{display:none;}
+  details.drow-d > summary:hover{background:rgba(241,193,58,.10);}
+  details.drow-d > summary .nm{
+    flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#aeb5c8;
+  }
+  details.drow-d > summary .nm::after{content:' ▸';color:var(--text-dim);font-size:.68rem;}
+  details.drow-d[open] > summary .nm::after{content:' ▾';color:var(--gold);}
+  details.drow-d .sub{
+    margin:.1rem 0 .3rem 1.3rem;padding-left:.5rem;border-left:1px solid var(--border);
+  }
+  details.drow-d .sub .drow{font-size:.73rem;}
+  details.drow-d .sub .drow .nm{color:var(--text-dim);}
+
+  /* cabeceras del modo "ganas / pierdes" */
+  .cmp-mid .gh.gh-gain{color:var(--ok);}
+  .cmp-mid .gh.gh-loss{color:var(--danger);}
+
   .empty-state{color:var(--text-dim);font-size:.85rem;text-align:center;padding:1.6rem 0;}
   .hint{color:var(--text-dim);font-size:.78rem;}
 
@@ -812,6 +835,7 @@ let items = [];
 let candidatesBySlot = {};
 let lastResults = [];
 let compareSelection = [];
+let cmpDiffMode = 'categoria'; // 'categoria' | 'signo' (ver renderComparePanel)
 let activeSlot = null;
 let sheetSource = null;
 let findView = 'compacto';   // vista del buscador: 'compacto' | 'detallado'
@@ -2023,6 +2047,43 @@ function refoldResults(){
   });
 }
 
+/* =========================================================================
+   COMPARADOR A/B — desglose por elemento en la diferencia
+   Reutiliza el mismo breakdown que ya calcula foldElementalStats() por
+   combo (una entrada por cada stat en bruto que compone el total: "Resistencia
+   al agua", "Resistencia elemental (todos)"...). Para la diferencia se casan
+   por nombre de stat entre A y B y se resta lo que aporta cada uno al total
+   (aporta = valor × multiplicador), así el desglose SIEMPRE suma exactamente
+   la diferencia del total de arriba. */
+function diffBreakdownFor(k, a, b){
+  const byStat = {};
+  ((a && a.breakdown && a.breakdown[k]) || []).forEach(e => { byStat[e.stat] = (byStat[e.stat] || 0) - e.aporta; });
+  ((b && b.breakdown && b.breakdown[k]) || []).forEach(e => { byStat[e.stat] = (byStat[e.stat] || 0) + e.aporta; });
+  return Object.entries(byStat)
+    .filter(([,d]) => d !== 0)
+    .sort((x,y) => Math.abs(y[1]) - Math.abs(x[1]));
+}
+
+function diffRowHtml(stat, diff, a, b){
+  const cls = diff > 0 ? 'positive' : 'negative';
+  const sign = diff > 0 ? '+' : '';
+  const rounded = Math.round(diff * 100) / 100;
+  const ico = statIconSmall(stat) || '<span style="width:16px"></span>';
+  const sub = ELEMENTAL_TOTAL_KEYS.includes(stat) ? diffBreakdownFor(stat, a, b) : [];
+  if (sub.length){
+    const subHtml = sub.map(([k2, d2]) => {
+      const c2 = d2 > 0 ? 'positive' : 'negative';
+      const s2 = d2 > 0 ? '+' : '';
+      return `<div class="drow">${statIconSmall(k2) || '<span style="width:16px"></span>'}<span class="nm">${k2}</span><span class="dval ${c2}">${s2}${Math.round(d2*100)/100}</span></div>`;
+    }).join('');
+    return `<details class="drow-d">
+      <summary>${ico}<span class="nm">${stat}</span><span class="dval ${cls}">${sign}${rounded}</span></summary>
+      <div class="sub">${subHtml}</div>
+    </details>`;
+  }
+  return `<div class="drow">${ico}<span class="nm">${stat}</span><span class="dval ${cls}">${sign}${rounded}</span></div>`;
+}
+
 function comboPiecesHtml(r){
   return r.labels.map((label, idx) => {
     const it = r.items[idx];
@@ -2138,19 +2199,25 @@ function renderComparePanel(){
     const d = (b.stats[k] || 0) - (a.stats[k] || 0);
     if (d !== 0) diffs[k] = d;
   });
-  // Mismo agrupado y mismo orden que la ficha y que las tarjetas, para poder leer
-  // las tres columnas en paralelo sin ir buscando cada stat.
-  const grupos = groupedStats(diffs);
+  const diffEntries = Object.entries(diffs);
 
-  const diffHtml = grupos.length
-    ? grupos.map(g => `<div class="gh">${g.title}</div>`
-        + g.rows.map(([stat, diff]) => {
-            const cls = diff > 0 ? 'positive' : 'negative';
-            const sign = diff > 0 ? '+' : '';
-            return `<div class="drow">${statIconSmall(stat) || '<span style="width:16px"></span>'}<span class="nm">${stat}</span><span class="dval ${cls}">${sign}${Math.round(diff * 100) / 100}</span></div>`;
-          }).join('')
-      ).join('')
-    : '<div class="hint" style="text-align:center;padding:.5rem 0">Stats idénticos.</div>';
+  let diffHtml;
+  if (!diffEntries.length){
+    diffHtml = '<div class="hint" style="text-align:center;padding:.5rem 0">Stats idénticos.</div>';
+  } else if (cmpDiffMode === 'signo'){
+    // De un vistazo: todo lo que ganas arriba, todo lo que pierdes abajo.
+    const ganas = diffEntries.filter(([,d]) => d > 0).sort((x,y) => y[1] - x[1]);
+    const pierdes = diffEntries.filter(([,d]) => d < 0).sort((x,y) => x[1] - y[1]);
+    diffHtml =
+      (ganas.length ? `<div class="gh gh-gain">Ganas</div>` + ganas.map(([k,d]) => diffRowHtml(k, d, a, b)).join('') : '')
+      + (pierdes.length ? `<div class="gh gh-loss">Pierdes</div>` + pierdes.map(([k,d]) => diffRowHtml(k, d, a, b)).join('') : '');
+  } else {
+    // Mismo agrupado y mismo orden que la ficha y que las tarjetas, para poder
+    // leer las tres columnas en paralelo sin ir buscando cada stat.
+    diffHtml = groupedStats(diffs)
+      .map(g => `<div class="gh">${g.title}</div>` + g.rows.map(([k,d]) => diffRowHtml(k, d, a, b)).join(''))
+      .join('');
+  }
 
   const panel = document.createElement('div');
   panel.className = 'panel cmp';
@@ -2158,6 +2225,7 @@ function renderComparePanel(){
     <div class="panel-head">
       <h2>Comparador A / B</h2>
       <span class="count">diferencia B − A</span>
+      <button class="ghost" id="toggle-diff-mode">${cmpDiffMode === 'signo' ? '☰ Por categoría' : '↕ Ganas / pierdes'}</button>
       <button class="ghost" id="swap-ab" title="Intercambiar A y B">⇄ Invertir A/B</button>
     </div>
     <div class="panel-body">
@@ -2170,6 +2238,10 @@ function renderComparePanel(){
         ${colHtml(b,'b')}
       </div>
     </div>`;
+  panel.querySelector('#toggle-diff-mode').onclick = () => {
+    cmpDiffMode = cmpDiffMode === 'signo' ? 'categoria' : 'signo';
+    renderResults();
+  };
   panel.querySelector('#swap-ab').onclick = () => { compareSelection.reverse(); renderResults(); };
   wirePieces(panel.querySelector('.cmp-col.a'), a);
   wirePieces(panel.querySelector('.cmp-col.b'), b);
