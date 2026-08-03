@@ -219,9 +219,6 @@ git), así que se reimplementó desde cero en esta sesión siguiendo este alcanc
 - Nombres de estadística sin unificar del todo: "PdV" y "Punto de vida" son la misma stat
   (Vida) pero Ankama los describe con dos textos distintos en su JSON; de momento quedan
   como dos claves separadas. No bloquea el uso normal de la herramienta.
-- Arma a dos manos que el usuario buscó y no le apareció en el buscador: pendiente de que
-  diga el nombre exacto para rastrearla en el JSON crudo (ver detalle en commits de sesión;
-  no es un bug confirmado, solo una sospecha sin verificar todavía).
 - v2 (nice-to-have, sin comprometer ahora): optimización global de las 12 piezas a la vez,
   UI web, soporte de sublimaciones épicas/de reliquia, auto-detección de nueva versión del
   juego.
