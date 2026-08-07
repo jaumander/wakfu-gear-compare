@@ -1577,31 +1577,37 @@ function topStatsOf(it, n){
     .slice(0, n);
 }
 
-function doSearch(){
+const SEARCH_PAGE_SIZE = 30;
+let searchShown = SEARCH_PAGE_SIZE;
+
+function doSearch(resetPaging){
+  if (resetPaging !== false) searchShown = SEARCH_PAGE_SIZE;
   const q = searchInput.value.trim();
   const slot = slotFilter.value;
   const lo = LEVEL_LO_STOPS[parseInt(levelMinInput.value, 10)];
   const hi = LEVEL_HI_STOPS[parseInt(levelMaxInput.value, 10)];
   const levelActive = !(lo === LEVEL_LO_STOPS[0] && hi === LEVEL_HI_STOPS[LEVEL_HI_STOPS.length - 1]);
+  const filtersActive = !!slot || levelActive || excludedRarities.size > 0;
   const countEl = document.getElementById('find-count');
   resultsList.innerHTML = '';
-  if (!q){
+  if (!q && !filtersActive){
     countEl.textContent = '';
     resultsList.className = 'find-msg';
-    resultsList.innerHTML = '<div class="hint">Escribe el nombre de un objeto para buscarlo.</div>';
+    resultsList.innerHTML = '<div class="hint">Escribe el nombre de un objeto, o usa los filtros (slot, nivel, rareza) para explorar sin buscar.</div>';
     return;
   }
   // Busqueda por palabras sueltas y sin acentos: "amuleto dragon" encuentra
-  // "Amuleto del dragon", y "critico" encuentra "critico".
-  const tokens = norm(q).split(/\s+/).filter(Boolean);
+  // "Amuleto del dragon", y "critico" encuentra "critico". Sin texto, solo
+  // se aplican los filtros (explorar por slot/nivel/rareza).
+  const tokens = q ? norm(q).split(/\s+/).filter(Boolean) : [];
   const all = items.filter(it =>
-    tokens.every(t => it._n.includes(t))
+    (tokens.length === 0 || tokens.every(t => it._n.includes(t)))
     && (!slot || it.slot === slot)
     && (!levelActive || (it.nivel >= lo && it.nivel <= hi))
     && !excludedRarities.has(it.rareza)
   );
-  const matches = all.slice(0, 60);
-  countEl.textContent = all.length + (all.length > 60 ? ' (muestra 60)' : '');
+  const matches = all.slice(0, searchShown);
+  countEl.textContent = all.length + (all.length > matches.length ? ' (muestra ' + matches.length + ')' : '');
   if (matches.length === 0){
     resultsList.className = 'find-msg';
     resultsList.innerHTML = '<div class="hint">Sin resultados.</div>';
@@ -1638,6 +1644,7 @@ function doSearch(){
       attachTip(tile, it);
       resultsList.appendChild(tile);
     });
+    appendShowMore(all.length, matches.length);
     return;
   }
 
@@ -1666,6 +1673,18 @@ function doSearch(){
     card.appendChild(st);
     resultsList.appendChild(card);
   });
+  appendShowMore(all.length, matches.length);
+}
+
+function appendShowMore(total, shown){
+  if (total <= shown) return;
+  const btn = document.createElement('button');
+  btn.className = 'add';
+  btn.style.margin = '.6rem auto';
+  btn.style.display = 'block';
+  btn.textContent = 'Ver más (' + (total - shown) + ' restantes)';
+  btn.onclick = () => { searchShown += SEARCH_PAGE_SIZE; doSearch(false); };
+  resultsList.appendChild(btn);
 }
 
 document.getElementById('find-view').onclick = (e) => {
