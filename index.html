@@ -355,12 +355,13 @@
   .rarity-filter .r-toggle{
     width:30px;height:30px;border-radius:8px;flex:none;
     display:flex;align-items:center;justify-content:center;
-    background:var(--surface-2);border:1px solid var(--border);cursor:pointer;
-    opacity:.32;transition:opacity .15s,border-color .15s,box-shadow .15s;
+    background:var(--surface-2);border:1px solid var(--r-color,var(--border));cursor:pointer;
+    opacity:1;box-shadow:0 0 8px -2px var(--r-color,transparent);
+    transition:opacity .15s,border-color .15s,box-shadow .15s,filter .15s;
   }
   .rarity-filter .r-toggle img{width:19px;height:19px;object-fit:contain;}
-  .rarity-filter .r-toggle:hover{opacity:.6;}
-  .rarity-filter .r-toggle.excluded{opacity:.22;filter:grayscale(1);border-color:var(--danger,#e2596b);}
+  .rarity-filter .r-toggle:hover{opacity:.85;}
+  .rarity-filter .r-toggle.excluded{opacity:.32;filter:grayscale(1);border-color:var(--border);box-shadow:none;}
 
   /* ---------- iconos de tipo de equipo (atajo, espejo del grid de Equipo) ---------- */
   .equip-filter{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.5rem;}
