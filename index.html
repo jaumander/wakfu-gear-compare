@@ -1415,6 +1415,15 @@ function addCandidate(it, slotKey){
   renderGear(); renderCandidates(); doSearch();
 }
 
+function removeCandidateById(slotKey, itemId){
+  const list = candidatesBySlot[slotKey];
+  if (!list) return;
+  const idx = list.findIndex(c => c.id === itemId);
+  if (idx === -1) return;
+  list.splice(idx, 1);
+  renderGear(); renderCandidates(); doSearch(false);
+}
+
 function renderCandidates(){
   const list = document.getElementById('cand-list');
   const countEl = document.getElementById('cand-count');
@@ -1660,17 +1669,22 @@ function doSearch(resetPaging){
 
   // Boton de anadir, igual en las dos vistas.
   const mkAdd = (it) => {
+    const matching = GEAR_SLOTS.filter(s => s.tipo === it.slot);
+    const presentIn = matching.find(s => candidatesBySlot[s.key].some(c => c.id === it.id));
     const target = targetSlotFor(it);
-    const yaEsta = target && candidatesBySlot[target].some(c => c.id === it.id);
     const b = document.createElement('button');
     b.className = 'add';
-    b.textContent = yaEsta ? '✓' : '+';
-    b.title = !target ? 'Este tipo de objeto no tiene slot en la ficha'
-            : yaEsta ? 'Ya está en ' + target
-            : 'Añadir a ' + target;
-    b.disabled = !target || yaEsta;
-    if (!target || yaEsta) b.style.opacity = '.4';
-    b.onclick = (e) => { e.stopPropagation(); addCandidate(it, target); };
+    if (presentIn){
+      b.textContent = '✓';
+      b.title = 'Quitar de ' + presentIn.key;
+      b.onclick = (e) => { e.stopPropagation(); removeCandidateById(presentIn.key, it.id); };
+    } else {
+      b.textContent = '+';
+      b.title = !target ? 'Este tipo de objeto no tiene slot en la ficha' : 'Añadir a ' + target;
+      b.disabled = !target;
+      if (!target) b.style.opacity = '.4';
+      b.onclick = (e) => { e.stopPropagation(); addCandidate(it, target); };
+    }
     return b;
   };
 
