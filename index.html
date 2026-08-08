@@ -1186,16 +1186,18 @@ const resultsList = document.getElementById('results-list');
 const sortSelect = document.getElementById('sort-select');
 const resultsPanel = document.getElementById('results-panel');
 
-/* Rarezas ocultas del buscador (vacio = todas visibles, por defecto). No
-   depende del dataset (RARITY_NAMES es fijo), asi que se puede montar sin
-   esperar a que carguen los items. */
-const excludedRarities = new Set();
+/* Rarezas ocultas del buscador. Por defecto solo se muestran las de gama
+   alta (Legendario, Reliquia, Recuerdo, Épico); el resto (Común, Poco Común,
+   Raro, Mítico) arrancan excluidas para no saturar la lista con objetos
+   de relleno. El usuario puede activarlas a mano con los iconos. */
+const DEFAULT_EXCLUDED_RARITIES = [0, 1, 2, 3];
+const excludedRarities = new Set(DEFAULT_EXCLUDED_RARITIES);
 function setupRarityFilter(){
   const wrap = document.getElementById('rarity-filter');
   wrap.innerHTML = '';
   Object.keys(RARITY_NAMES).map(Number).sort((a,b) => a - b).forEach(r => {
     const btn = document.createElement('div');
-    btn.className = 'r-toggle';
+    btn.className = 'r-toggle' + (excludedRarities.has(r) ? ' excluded' : '');
     btn.style.setProperty('--r-color', rarityColor(r));
     btn.title = 'Ocultar/mostrar ' + rarityName(r);
     btn.innerHTML = `<img src="${ASSETS}/rarities/${r}.png" alt="${rarityName(r)}" onerror="this.remove()">`;
