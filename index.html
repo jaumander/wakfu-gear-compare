@@ -120,7 +120,7 @@
   }
   .panel + .panel{margin-top:1rem;}
   .panel-head{
-    display:flex;align-items:center;gap:.55rem;
+    display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;
     padding:.7rem .95rem;border-bottom:1px solid var(--border-soft);
   }
   .panel-head h2{
@@ -788,6 +788,7 @@
           <button type="button" data-v="compacto" class="on">Compacto</button>
           <button type="button" data-v="detallado">Detallado</button>
         </div>
+        <button type="button" class="ghost" id="level-sort-toggle" title="Orden: nivel, luego rareza (alta→baja), luego nombre">Nivel ↑</button>
         <span class="count" id="find-count"></span>
       </div>
       <div class="panel-body">
@@ -1606,6 +1607,7 @@ function topStatsOf(it, n){
 
 const PAGE_SIZE = { compacto: 26, detallado: 12 };
 let searchPage = 1;
+let levelSortDesc = false;
 const findPager = document.getElementById('find-pager');
 
 function doSearch(resetPaging){
@@ -1634,6 +1636,14 @@ function doSearch(resetPaging){
     && (!slot || it.slot === slot)
     && (!levelActive || (it.nivel >= lo && it.nivel <= hi))
     && !excludedRarities.has(it.rareza)
+  );
+  // Orden: nivel (asc/desc segun el boton) -> dentro del mismo nivel, rareza
+  // de mas alta a mas baja -> dentro de nivel+rareza, alfabetico.
+  const lvlDir = levelSortDesc ? -1 : 1;
+  all.sort((a, b) =>
+    (lvlDir * (a.nivel - b.nivel))
+    || ((b.rareza ?? -1) - (a.rareza ?? -1))
+    || a.nombre.localeCompare(b.nombre, 'es')
   );
   const pageSize = PAGE_SIZE[findView] || 30;
   const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
@@ -1747,6 +1757,11 @@ document.getElementById('find-view').onclick = (e) => {
   findView = b.dataset.v;
   document.querySelectorAll('#find-view button').forEach(x => x.classList.toggle('on', x === b));
   hideTip();
+  doSearch();
+};
+document.getElementById('level-sort-toggle').onclick = (e) => {
+  levelSortDesc = !levelSortDesc;
+  e.target.textContent = levelSortDesc ? 'Nivel ↓' : 'Nivel ↑';
   doSearch();
 };
 searchInput.addEventListener('input', doSearch);
