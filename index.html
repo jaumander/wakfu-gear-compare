@@ -1731,7 +1731,6 @@ function renderPager(totalPages){
   const goTo = (p) => {
     searchPage = p;
     doSearch(false);
-    document.getElementById('find-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   const prev = document.createElement('button');
   prev.className = 'pager-btn';
