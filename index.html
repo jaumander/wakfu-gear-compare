@@ -435,7 +435,7 @@
   /* --- vista COMPACTA: solo icono y nombre, ninguna stat --- */
   .find-compact{
     display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));
-    gap:.5rem;max-height:430px;overflow-y:auto;margin-top:.8rem;padding:.15rem .2rem 0 0;
+    gap:.5rem;margin-top:.8rem;padding:.15rem .2rem 0 0;
   }
   .find-tile{
     position:relative;text-align:center;cursor:pointer;
@@ -457,35 +457,42 @@
 
   /* --- vista DETALLADA: ficha completa, sin tooltip --- */
   .find-detail{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));
-    gap:.55rem;max-height:560px;overflow-y:auto;margin-top:.8rem;padding-right:.2rem;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:.55rem;margin-top:.8rem;padding-right:.2rem;
   }
   .find-full{
     background:linear-gradient(180deg,#232838,#1c202c);
-    border:1px solid var(--border);border-left-width:3px;border-radius:10px;padding:.6rem .65rem;
+    border:1px solid var(--border);border-left-width:3px;border-radius:10px;padding:.5rem .6rem;
   }
   .find-full:hover{border-color:#59648a;}
-  .find-full .fhead{display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.5rem;}
+  .find-full .fhead{display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.4rem;}
+  .find-full .itemicon{width:36px;height:36px;border-radius:7px;}
   .find-full .fhead .body{flex:1;min-width:0;}
-  .find-full .fstats{display:grid;grid-template-columns:1fr;gap:.05rem;}
+  .find-full .fstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:.02rem .35rem;}
   .find-full .fstat{
-    display:flex;align-items:center;gap:.45rem;padding:.18rem .3rem;border-radius:5px;font-size:.76rem;
+    display:flex;align-items:center;gap:.35rem;padding:.12rem .28rem;border-radius:5px;font-size:.72rem;
   }
   .find-full .fstat:nth-child(odd){background:rgba(255,255,255,.022);}
-  .find-full .fstat img{width:16px;height:16px;object-fit:contain;flex:none;}
+  .find-full .fstat img{width:14px;height:14px;object-fit:contain;flex:none;}
   .find-full .fstat .fv{
     font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);
-    min-width:3.1rem;text-align:right;flex:none;
+    min-width:2.7rem;text-align:right;flex:none;font-size:.72rem;
   }
   .find-full .fstat .fn{color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-  .show-more-btn{
-    grid-column:1/-1;display:block;width:100%;margin:.4rem 0 0;
-    padding:.6rem 1rem;border-radius:8px;text-align:center;
-    background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);
-    font-size:.8rem;font-family:inherit;cursor:pointer;transition:border-color .12s,color .12s;
+  /* --- paginado del buscador (sustituye al scroll interno) --- */
+  .pager{
+    display:flex;align-items:center;justify-content:center;gap:.9rem;
+    margin-top:.8rem;
   }
-  .show-more-btn:hover{border-color:var(--ok);color:var(--ok);}
+  .pager-btn{
+    padding:.4rem .9rem;border-radius:7px;font-size:.78rem;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    cursor:pointer;transition:border-color .12s,color .12s;
+  }
+  .pager-btn:hover:not(:disabled){border-color:var(--ok);color:var(--ok);}
+  .pager-btn:disabled{opacity:.32;cursor:default;}
+  .pager-info{font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--text-muted);}
 
   .tag{
     font-size:.62rem;font-weight:600;padding:1px 6px;border-radius:4px;
@@ -794,6 +801,7 @@
         <div class="rarity-filter" id="rarity-filter"></div>
         <div class="equip-filter" id="equip-filter"></div>
         <div class="find-msg" id="results-list"></div>
+        <div class="pager" id="find-pager"></div>
       </div>
     </div>
 
@@ -1589,11 +1597,12 @@ function topStatsOf(it, n){
     .slice(0, n);
 }
 
-const SEARCH_PAGE_SIZE = 30;
-let searchShown = SEARCH_PAGE_SIZE;
+const PAGE_SIZE = { compacto: 30, detallado: 12 };
+let searchPage = 1;
+const findPager = document.getElementById('find-pager');
 
 function doSearch(resetPaging){
-  if (resetPaging !== false) searchShown = SEARCH_PAGE_SIZE;
+  if (resetPaging !== false) searchPage = 1;
   const q = searchInput.value.trim();
   const slot = slotFilter.value;
   const lo = LEVEL_LO_STOPS[parseInt(levelMinInput.value, 10)];
@@ -1602,6 +1611,7 @@ function doSearch(resetPaging){
   const filtersActive = !!slot || levelActive || excludedRarities.size > 0;
   const countEl = document.getElementById('find-count');
   resultsList.innerHTML = '';
+  findPager.innerHTML = '';
   if (!q && !filtersActive){
     countEl.textContent = '';
     resultsList.className = 'find-msg';
@@ -1618,8 +1628,13 @@ function doSearch(resetPaging){
     && (!levelActive || (it.nivel >= lo && it.nivel <= hi))
     && !excludedRarities.has(it.rareza)
   );
-  const matches = all.slice(0, searchShown);
-  countEl.textContent = all.length + (all.length > matches.length ? ' (muestra ' + matches.length + ')' : '');
+  const pageSize = PAGE_SIZE[findView] || 30;
+  const totalPages = Math.max(1, Math.ceil(all.length / pageSize));
+  if (searchPage > totalPages) searchPage = totalPages;
+  if (searchPage < 1) searchPage = 1;
+  const startIdx = (searchPage - 1) * pageSize;
+  const matches = all.slice(startIdx, startIdx + pageSize);
+  countEl.textContent = all.length + (totalPages > 1 ? ' · página ' + searchPage + '/' + totalPages : '');
   if (matches.length === 0){
     resultsList.className = 'find-msg';
     resultsList.innerHTML = '<div class="hint">Sin resultados.</div>';
@@ -1656,7 +1671,7 @@ function doSearch(resetPaging){
       attachTip(tile, it);
       resultsList.appendChild(tile);
     });
-    appendShowMore(all.length, matches.length);
+    renderPager(totalPages);
     return;
   }
 
@@ -1685,16 +1700,33 @@ function doSearch(resetPaging){
     card.appendChild(st);
     resultsList.appendChild(card);
   });
-  appendShowMore(all.length, matches.length);
+  renderPager(totalPages);
 }
 
-function appendShowMore(total, shown){
-  if (total <= shown) return;
-  const btn = document.createElement('button');
-  btn.className = 'show-more-btn';
-  btn.textContent = 'Ver más (' + (total - shown) + ' restantes)';
-  btn.onclick = () => { searchShown += SEARCH_PAGE_SIZE; doSearch(false); };
-  resultsList.appendChild(btn);
+function renderPager(totalPages){
+  findPager.innerHTML = '';
+  if (totalPages <= 1) return;
+  const goTo = (p) => {
+    searchPage = p;
+    doSearch(false);
+    document.getElementById('find-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  const prev = document.createElement('button');
+  prev.className = 'pager-btn';
+  prev.textContent = '‹ Anterior';
+  prev.disabled = searchPage <= 1;
+  prev.onclick = () => goTo(searchPage - 1);
+  const info = document.createElement('span');
+  info.className = 'pager-info';
+  info.textContent = 'Página ' + searchPage + ' de ' + totalPages;
+  const next = document.createElement('button');
+  next.className = 'pager-btn';
+  next.textContent = 'Siguiente ›';
+  next.disabled = searchPage >= totalPages;
+  next.onclick = () => goTo(searchPage + 1);
+  findPager.appendChild(prev);
+  findPager.appendChild(info);
+  findPager.appendChild(next);
 }
 
 document.getElementById('find-view').onclick = (e) => {
