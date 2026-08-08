@@ -359,7 +359,8 @@
     opacity:.32;transition:opacity .15s,border-color .15s,box-shadow .15s;
   }
   .rarity-filter .r-toggle img{width:19px;height:19px;object-fit:contain;}
-  .rarity-filter .r-toggle.on{opacity:1;border-color:var(--r-color,var(--border));box-shadow:0 0 8px -2px var(--r-color,transparent);}
+  .rarity-filter .r-toggle:hover{opacity:.6;}
+  .rarity-filter .r-toggle.excluded{opacity:.22;filter:grayscale(1);border-color:var(--danger,#e2596b);}
 
   /* ---------- iconos de tipo de equipo (atajo, espejo del grid de Equipo) ---------- */
   .equip-filter{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.5rem;}
@@ -476,6 +477,14 @@
     min-width:3.1rem;text-align:right;flex:none;
   }
   .find-full .fstat .fn{color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .show-more-btn{
+    grid-column:1/-1;display:block;width:100%;margin:.4rem 0 0;
+    padding:.6rem 1rem;border-radius:8px;text-align:center;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);
+    font-size:.8rem;font-family:inherit;cursor:pointer;transition:border-color .12s,color .12s;
+  }
+  .show-more-btn:hover{border-color:var(--ok);color:var(--ok);}
 
   .tag{
     font-size:.62rem;font-weight:600;padding:1px 6px;border-radius:4px;
@@ -1186,13 +1195,13 @@ function setupRarityFilter(){
   wrap.innerHTML = '';
   Object.keys(RARITY_NAMES).map(Number).sort((a,b) => a - b).forEach(r => {
     const btn = document.createElement('div');
-    btn.className = 'r-toggle on';
+    btn.className = 'r-toggle';
     btn.style.setProperty('--r-color', rarityColor(r));
     btn.title = 'Ocultar/mostrar ' + rarityName(r);
     btn.innerHTML = `<img src="${ASSETS}/rarities/${r}.png" alt="${rarityName(r)}" onerror="this.remove()">`;
     btn.onclick = () => {
       if (excludedRarities.has(r)) excludedRarities.delete(r); else excludedRarities.add(r);
-      btn.classList.toggle('on');
+      btn.classList.toggle('excluded');
       doSearch();
     };
     wrap.appendChild(btn);
@@ -1679,9 +1688,7 @@ function doSearch(resetPaging){
 function appendShowMore(total, shown){
   if (total <= shown) return;
   const btn = document.createElement('button');
-  btn.className = 'add';
-  btn.style.margin = '.6rem auto';
-  btn.style.display = 'block';
+  btn.className = 'show-more-btn';
   btn.textContent = 'Ver más (' + (total - shown) + ' restantes)';
   btn.onclick = () => { searchShown += SEARCH_PAGE_SIZE; doSearch(false); };
   resultsList.appendChild(btn);
