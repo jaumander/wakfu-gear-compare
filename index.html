@@ -465,18 +465,25 @@
     border:1px solid var(--border);border-left-width:3px;border-radius:10px;padding:.5rem .6rem;
   }
   .find-full:hover{border-color:#59648a;}
-  .find-full .fhead{display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.4rem;}
-  .find-full .itemicon{width:36px;height:36px;border-radius:7px;}
+  .find-full .fhead{display:flex;gap:.55rem;align-items:flex-start;margin-bottom:.45rem;}
+  .find-full .itemicon{width:46px;height:46px;border-radius:8px;}
   .find-full .fhead .body{flex:1;min-width:0;}
-  .find-full .fstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:.02rem .35rem;}
+  .find-full .title{font-size:.92rem;font-weight:700;}
+  .find-full .badges{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem;}
+  .find-full .badge{
+    font-size:.64rem;font-weight:600;padding:2px 7px;border-radius:5px;
+    font-family:'JetBrains Mono',monospace;letter-spacing:.02em;white-space:nowrap;
+    background:var(--surface-3);color:var(--text-muted);border:1px solid var(--border);
+  }
+  .find-full .fstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.05rem .4rem;}
   .find-full .fstat{
-    display:flex;align-items:center;gap:.35rem;padding:.12rem .28rem;border-radius:5px;font-size:.72rem;
+    display:flex;align-items:center;gap:.4rem;padding:.16rem .3rem;border-radius:5px;font-size:.78rem;
   }
   .find-full .fstat:nth-child(odd){background:rgba(255,255,255,.022);}
-  .find-full .fstat img{width:14px;height:14px;object-fit:contain;flex:none;}
+  .find-full .fstat img{width:17px;height:17px;object-fit:contain;flex:none;}
   .find-full .fstat .fv{
     font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);
-    min-width:2.7rem;text-align:right;flex:none;font-size:.72rem;
+    min-width:2.9rem;text-align:right;flex:none;font-size:.78rem;
   }
   .find-full .fstat .fn{color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
@@ -1687,10 +1694,15 @@ function doSearch(resetPaging){
     ).join('') || '<div class="hint">Sin stats.</div>';
     const head = document.createElement('div');
     head.className = 'fhead';
+    const rc = rarityColor(it.rareza);
     head.innerHTML = `${itemIconHtml(it)}
       <div class="body">
-        <div class="title">${rarityGem(it.rareza)}<span class="txt">${it.nombre}</span>${tagFor(it)}</div>
-        <div class="meta"><span>nvl ${it.nivel}</span><span>·</span><span>${it.slot}</span></div>
+        <div class="title"><span class="txt">${it.nombre}</span>${tagFor(it)}</div>
+        <div class="badges">
+          <span class="badge">Nvl ${it.nivel}</span>
+          <span class="badge">${it.slot}</span>
+          <span class="badge" style="color:${rc};background:${rc}22;border-color:${rc}55">${rarityName(it.rareza)}</span>
+        </div>
       </div>`;
     head.appendChild(mkAdd(it));
     card.appendChild(head);
